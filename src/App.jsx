@@ -1109,6 +1109,28 @@ function InlineAdStrip({ adClient, slot = "auto", minHeight = 140, label = "Spon
   );
 }
 
+function CenterAdStack({ adClient, label = "Sponsored", minHeight = 150, desktopCount = 5 }) {
+  const [width, setWidth] = useState(() => typeof window !== "undefined" ? window.innerWidth : 1280);
+
+  useEffect(() => {
+    const onResize = () => setWidth(window.innerWidth);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
+  if (!adClient) return null;
+
+  const count = width <= 600 ? Math.min(2, desktopCount) : width <= 900 ? Math.min(3, desktopCount) : desktopCount;
+
+  return (
+    <div className="noprint mf-center-ad-stack" style={{ margin: "0 auto 12px", maxWidth: 1040, display: "flex", flexDirection: "column", gap: 12 }}>
+      {Array.from({ length: count }).map((_, idx) => (
+        <InlineAdStrip key={idx} adClient={adClient} minHeight={minHeight} label={label} />
+      ))}
+    </div>
+  );
+}
+
 function RowEditor({ row, idx, sessId, onUpdate, onRemove, theme }) {
   const T = theme || THEMES.melamine;
   // Local state so inputs are fully controlled and responsive
@@ -2214,6 +2236,89 @@ function download(blob, name) {
 const PRINT_CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;700&display=swap');
 
+@media (max-width: 900px) {
+  .mf-topbar {
+    height: auto !important;
+    padding: 8px 12px !important;
+  }
+  .mf-topbar-inner {
+    width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .mf-topbar-actions {
+    width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: flex-end;
+  }
+  .mf-main-shell {
+    padding: 12px 10px !important;
+    gap: 10px !important;
+  }
+  .mf-legend-bar {
+    gap: 10px !important;
+    padding: 10px 12px !important;
+  }
+  .mf-gate-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 600px) {
+  .mf-brand-text {
+    display: none !important;
+  }
+  .mf-tab-group {
+    width: 100%;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .mf-topbar-actions {
+    justify-content: center;
+  }
+  .mf-main-shell {
+    padding: 10px 8px !important;
+  }
+  .mf-content-wrap {
+    max-width: 100% !important;
+  }
+  .mf-legend-bar {
+    display: none !important;
+  }
+  .mf-two-col-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .mf-gate-panel {
+    border-radius: 14px !important;
+  }
+  .mf-center-ad-stack {
+    gap: 10px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .mf-topbar {
+    padding: 8px !important;
+  }
+  .mf-main-shell {
+    padding: 8px 6px !important;
+  }
+  .mf-gate-grid {
+    padding: 10px !important;
+    gap: 10px !important;
+  }
+  .mf-gate-panel h,
+  .mf-gate-panel div,
+  .mf-gate-panel button {
+    font-size: 12px;
+  }
+}
+
 @media print {
   .noprint { display: none !important; }
   @page { margin: 12mm; }
@@ -3031,7 +3136,7 @@ function BillView({
       {/* ── Company Details ── */}
       <div style={card}>
         <div style={cardHead(C.dark)}><span>🏢</span><span style={cardTitle}>{t("Company Details","कंपनी विवरण")}</span></div>
-        <div style={{ padding:"12px 14px", display:"grid", gridTemplateColumns:"1fr 1fr", gap:"10px 16px" }}>
+        <div className="mf-two-col-grid" style={{ padding:"12px 14px", display:"grid", gridTemplateColumns:"1fr 1fr", gap:"10px 16px" }}>
           <div>
             <span style={lbl}>{t("Company Name","कंपनी का नाम")}</span>
             <input style={inp} value={company} onChange={e=>setCompany(e.target.value)} placeholder={t("Company name","कंपनी का नाम")} />
@@ -3065,7 +3170,7 @@ function BillView({
       {/* ── Bill Meta ── */}
       <div style={card}>
         <div style={cardHead(C.mid)}><span>📋</span><span style={cardTitle}>{t("Bill Details","बिल विवरण")}</span></div>
-        <div style={{ padding:"12px 14px", display:"grid", gridTemplateColumns:"1fr 1fr", gap:"10px 16px" }}>
+        <div className="mf-two-col-grid" style={{ padding:"12px 14px", display:"grid", gridTemplateColumns:"1fr 1fr", gap:"10px 16px" }}>
           <div>
             <span style={lbl}>{t("Client Name","ग्राहक का नाम")}</span>
             <input style={inp} value={billClient} onChange={e=>setBillClient(e.target.value)} placeholder={t("Client / Party name","ग्राहक / पार्टी का नाम")} />
@@ -3424,7 +3529,7 @@ function DownloadGateModal({ open, label, seconds, videoUrl, adClient, onClose, 
 
   return (
     <div className="noprint" style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,.72)", zIndex: 1200, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-      <div style={{ width: "min(920px, 100%)", background: "#fff", borderRadius: 18, overflow: "hidden", boxShadow: "0 22px 70px rgba(15,23,42,.45)" }}>
+      <div className="mf-gate-panel" style={{ width: "min(920px, 100%)", background: "#fff", borderRadius: 18, overflow: "hidden", boxShadow: "0 22px 70px rgba(15,23,42,.45)" }}>
         <div style={{ background: "#1F4E79", color: "#fff", padding: "14px 18px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div>
             <div style={{ fontSize: 18, fontWeight: "bold" }}>MeasureFlow Support</div>
@@ -3436,7 +3541,7 @@ function DownloadGateModal({ open, label, seconds, videoUrl, adClient, onClose, 
             </button>
           )}
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: 16, padding: 16 }}>
+        <div className="mf-gate-grid" style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: 16, padding: 16 }}>
           <div style={{ background: "#0f172a", borderRadius: 14, overflow: "hidden", minHeight: 320 }}>
             {videoUrl ? (
               <iframe
@@ -4448,13 +4553,13 @@ tr.foot-l td.foot-lbl,tr.foot-l td.foot-val{background:#D6E4F0;color:#1F4E79;fon
       )}
 
       {/* TOP BAR */}
-      <div className="noprint" style={{ background: C.dark, padding: "0 22px", display: "flex", alignItems: "center", justifyContent: "space-between", height: 54, boxShadow: "0 2px 16px rgba(31,78,121,.4)", position: "sticky", top: 0, zIndex: 100 }}>
-        <div style={{ color: "#fff", fontSize: 18, fontWeight: "bold", letterSpacing: 1, display: "flex", alignItems: "center", gap: 8 }}>
+      <div className="noprint mf-topbar" style={{ background: C.dark, padding: "0 22px", display: "flex", alignItems: "center", justifyContent: "space-between", height: 54, boxShadow: "0 2px 16px rgba(31,78,121,.4)", position: "sticky", top: 0, zIndex: 100 }}>
+        <div className="mf-topbar-inner" style={{ color: "#fff", fontSize: 18, fontWeight: "bold", letterSpacing: 1, display: "flex", alignItems: "center", gap: 8 }}>
           <div style={{ background: C.mid, borderRadius: 8, width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}>📐</div>
-          MeasureFlow
+          <span className="mf-brand-text">MeasureFlow</span>
         </div>
-        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <div style={{ display:"flex", background:"rgba(255,255,255,.12)", borderRadius:8, padding:2, gap:2 }}>
+        <div className="mf-topbar-actions" style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <div className="mf-tab-group" style={{ display:"flex", background:"rgba(255,255,255,.12)", borderRadius:8, padding:2, gap:2 }}>
             {[["en","EN"],["hi","हिंदी"]].map(([k,l]) => (
               <button key={k} onClick={() => setLang(k)} style={{
                 background: lang===k ? "#fff" : "transparent",
@@ -4492,15 +4597,15 @@ tr.foot-l td.foot-lbl,tr.foot-l td.foot-val{background:#D6E4F0;color:#1F4E79;fon
         </div>
       </div>
 
-      <div className="noprint" style={{ maxWidth: "100%", margin: "0 auto", padding: "18px 14px", display: "flex", gap: 14, alignItems: "flex-start", justifyContent: "center" }}>
+      <div className="noprint mf-main-shell" style={{ maxWidth: "100%", margin: "0 auto", padding: "18px 14px", display: "flex", gap: 14, alignItems: "flex-start", justifyContent: "center" }}>
         <AutoAdBanner adClient={adConfig.adClient} side="left" activeTab={activeTab} />
-        <div style={{ maxWidth: 1160, width: "100%" }}>
+        <div className="mf-content-wrap" style={{ maxWidth: 1160, width: "100%" }}>
 
         {/* ══ MEASURE MODE ══════════════════════════════════════════════════════ */}
         {activeTab==="measure" && <>
 
         {/* TYPE LEGEND */}
-        <div style={{ background: "#fff", borderRadius: 10, border: "1px solid #dbeafe", padding: "9px 18px", marginBottom: 16, display: "flex", gap: 24, flexWrap: "wrap", alignItems: "center" }}>
+        <div className="mf-legend-bar" style={{ background: "#fff", borderRadius: 10, border: "1px solid #dbeafe", padding: "9px 18px", marginBottom: 16, display: "flex", gap: 24, flexWrap: "wrap", alignItems: "center" }}>
           <span style={{ fontSize: 13, fontWeight: "bold", color: C.dark }}>Types:</span>
           <span style={{ fontSize: 13, color: C.mid }}>🟦 <strong>Sqft</strong> = L × W × Qty → Area (sq ft)</span>
           <span style={{ fontSize: 13, color: C.green }}>🟩 <strong>Rnft</strong> = L × Qty → Running feet</span>
@@ -4678,13 +4783,7 @@ tr.foot-l td.foot-lbl,tr.foot-l td.foot-val{background:#D6E4F0;color:#1F4E79;fon
                 </button>
               ))}
             </div>
-            <div className="noprint" style={{ margin: "12px auto 18px", maxWidth: 1040, display: "flex", flexDirection: "column", gap: 12 }}>
-              <InlineAdStrip adClient={adConfig.adClient} minHeight={150} label="Supported Links" />
-              <InlineAdStrip adClient={adConfig.adClient} minHeight={150} label="Supported Links" />
-              <InlineAdStrip adClient={adConfig.adClient} minHeight={150} label="Supported Links" />
-              <InlineAdStrip adClient={adConfig.adClient} minHeight={150} label="Supported Links" />
-              <InlineAdStrip adClient={adConfig.adClient} minHeight={150} label="Supported Links" />
-            </div>
+            <CenterAdStack adClient={adConfig.adClient} minHeight={150} label="Supported Links" desktopCount={5} />
 
           </>
         )}
@@ -4742,13 +4841,7 @@ tr.foot-l td.foot-lbl,tr.foot-l td.foot-val{background:#D6E4F0;color:#1F4E79;fon
                 ))}
               </div>
             </div>
-            <div className="noprint" style={{ margin: "0 auto 12px", maxWidth: 1040, display: "flex", flexDirection: "column", gap: 12 }}>
-              <InlineAdStrip adClient={adConfig.adClient} minHeight={150} label="Sponsored" />
-              <InlineAdStrip adClient={adConfig.adClient} minHeight={150} label="Sponsored" />
-              <InlineAdStrip adClient={adConfig.adClient} minHeight={150} label="Sponsored" />
-              <InlineAdStrip adClient={adConfig.adClient} minHeight={150} label="Sponsored" />
-              <InlineAdStrip adClient={adConfig.adClient} minHeight={150} label="Sponsored" />
-            </div>
+            <CenterAdStack adClient={adConfig.adClient} minHeight={150} label="Sponsored" desktopCount={5} />
           </div>
         )}
         </div>
