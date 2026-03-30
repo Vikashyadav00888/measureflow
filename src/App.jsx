@@ -4678,7 +4678,9 @@ tr.foot-l td.foot-lbl,tr.foot-l td.foot-val{background:#D6E4F0;color:#1F4E79;fon
                 </button>
               ))}
             </div>
-            <div className="noprint" style={{ margin: "12px auto 18px", maxWidth: 1040 }}>
+            <div className="noprint" style={{ margin: "12px auto 18px", maxWidth: 1040, display: "flex", flexDirection: "column", gap: 12 }}>
+              <InlineAdStrip adClient={adConfig.adClient} minHeight={150} label="Supported Links" />
+              <InlineAdStrip adClient={adConfig.adClient} minHeight={150} label="Supported Links" />
               <InlineAdStrip adClient={adConfig.adClient} minHeight={150} label="Supported Links" />
             </div>
 
