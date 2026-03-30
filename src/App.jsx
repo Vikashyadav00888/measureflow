@@ -1049,8 +1049,8 @@ function AutoAdBanner({ adClient, slot = "auto", side = "right", activeTab, cont
   const railWidth = activeTab === "bill" || activeTab === "rates"
     ? Math.max(120, Math.floor(gutterWidth * 0.98))
     : 163;
-  const blockCount = activeTab === "measure" ? 2 : 3;
-  const blockHeight = activeTab === "measure" ? 260 : 300;
+  const blockCount = activeTab === "measure" ? 4 : 5;
+  const blockHeight = activeTab === "measure" ? 250 : 290;
 
   return (
     <div className="noprint" style={{ width: railWidth, flex: `0 0 ${railWidth}px`, alignSelf: "stretch" }}>
@@ -1072,6 +1072,39 @@ function AutoAdBanner({ adClient, slot = "auto", side = "right", activeTab, cont
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+function InlineAdStrip({ adClient, slot = "auto", minHeight = 140, label = "Sponsored" }) {
+  const ref = useRef(null);
+
+  useEffect(() => {
+    if (!adClient || !ref.current || ref.current.dataset.loaded === "1") return;
+    try {
+      (window.adsbygoogle = window.adsbygoogle || []).push({});
+      ref.current.dataset.loaded = "1";
+    } catch {
+      // Never let ad init failures block the app
+    }
+  }, [adClient]);
+
+  if (!adClient) return null;
+
+  return (
+    <div className="noprint" style={{ background: "#fff", border: "1px solid #dbeafe", borderRadius: 14, padding: "10px 12px", boxShadow: "0 8px 20px rgba(15,23,42,.06)" }}>
+      <div style={{ fontSize: 10, color: "#64748b", letterSpacing: ".08em", textTransform: "uppercase", marginBottom: 8 }}>
+        {label}
+      </div>
+      <ins
+        ref={ref}
+        className="adsbygoogle"
+        style={{ display: "block", width: "100%", minHeight }}
+        data-ad-client={adClient}
+        data-ad-slot={slot}
+        data-ad-format="auto"
+        data-full-width-responsive="true"
+      />
     </div>
   );
 }
@@ -4639,6 +4672,9 @@ tr.foot-l td.foot-lbl,tr.foot-l td.foot-val{background:#D6E4F0;color:#1F4E79;fon
                 </button>
               ))}
             </div>
+            <div className="noprint" style={{ margin: "12px auto 18px", maxWidth: 1040 }}>
+              <InlineAdStrip adClient={adConfig.adClient} minHeight={150} label="Supported Links" />
+            </div>
 
           </>
         )}
@@ -4683,16 +4719,21 @@ tr.foot-l td.foot-lbl,tr.foot-l td.foot-val{background:#D6E4F0;color:#1F4E79;fon
 
         {/* EMPTY STATE */}
         {!loading && !hasSessions && activeTab!=="admin" && (
-          <div style={{ textAlign: "center", padding: "36px 20px", color: "#94a3b8" }}>
-            <div style={{ fontSize: 52, marginBottom: 10 }}>📋</div>
-            <div style={{ fontSize: 17, fontWeight: "bold", color: C.dark, marginBottom: 5 }}>MeasureFlow v2.0</div>
-            <div style={{ fontSize: 13, marginBottom: 20 }}>Upload images · AI detects Sqft &amp; Rnft · Edit · Export</div>
-            <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
-              {["📷 Upload image", "🤖 AI detects Sqft/Rnft", "✏️ Edit inline", "📝 Word .docx", "📊 CSV", "🖨 Print/PDF", "💾 Save & Load"].map((s, i) => (
-                <div key={i} style={{ background: "#fff", borderRadius: 9, padding: "9px 13px", border: "1px solid #dbeafe", fontSize: 12, color: C.dark, fontWeight: "bold" }}>
-                  {s}
-                </div>
-              ))}
+          <div>
+            <div style={{ textAlign: "center", padding: "36px 20px", color: "#94a3b8" }}>
+              <div style={{ fontSize: 52, marginBottom: 10 }}>📋</div>
+              <div style={{ fontSize: 17, fontWeight: "bold", color: C.dark, marginBottom: 5 }}>MeasureFlow v2.0</div>
+              <div style={{ fontSize: 13, marginBottom: 20 }}>Upload images · AI detects Sqft &amp; Rnft · Edit · Export</div>
+              <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
+                {["📷 Upload image", "🤖 AI detects Sqft/Rnft", "✏️ Edit inline", "📝 Word .docx", "📊 CSV", "🖨 Print/PDF", "💾 Save & Load"].map((s, i) => (
+                  <div key={i} style={{ background: "#fff", borderRadius: 9, padding: "9px 13px", border: "1px solid #dbeafe", fontSize: 12, color: C.dark, fontWeight: "bold" }}>
+                    {s}
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="noprint" style={{ margin: "0 auto 12px", maxWidth: 1040 }}>
+              <InlineAdStrip adClient={adConfig.adClient} minHeight={150} label="Sponsored" />
             </div>
           </div>
         )}
