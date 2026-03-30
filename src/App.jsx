@@ -3404,7 +3404,7 @@ function AdminPanel({ lang = "en", analyticsEnabled }) {
   );
 }
 
-function DownloadGateModal({ open, label, seconds, videoUrl, onClose, onContinue, processing = false, processingText = "" }) {
+function DownloadGateModal({ open, label, seconds, videoUrl, adClient, onClose, onContinue, processing = false, processingText = "" }) {
   const [remaining, setRemaining] = useState(seconds);
   const isUpload = processing || /upload/i.test(label || "");
 
@@ -3446,6 +3446,10 @@ function DownloadGateModal({ open, label, seconds, videoUrl, onClose, onContinue
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                 allowFullScreen
               />
+            ) : adClient ? (
+              <div style={{ padding: 14, background: "#fff", minHeight: 320, height: "100%" }}>
+                <InlineAdStrip adClient={adClient} minHeight={292} label="Sponsored" />
+              </div>
             ) : (
               <div style={{ height: "100%", minHeight: 320, display: "flex", alignItems: "center", justifyContent: "center", color: "#cbd5e1", padding: 24, textAlign: "center" }}>
                 Please wait while support content is shown before download
@@ -3530,7 +3534,7 @@ export default function App() {
   const [adminMode, setAdminMode] = useState(() => typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("admin") === "1" : false);
   const [adConfig, setAdConfig] = useState({
     enabled: true,
-    gateEnabled: false,
+    gateEnabled: true,
     adClient: "",
     gateSeconds: 6,
     videoUrl: "",
@@ -4340,6 +4344,7 @@ tr.foot-l td.foot-lbl,tr.foot-l td.foot-val{background:#D6E4F0;color:#1F4E79;fon
         label={downloadGateLabel}
         seconds={Math.max(1, parseInt(adConfig.gateSeconds) || 6)}
         videoUrl={adConfig.videoUrl}
+        adClient={adConfig.adClient}
         onClose={closeDownloadGate}
         onContinue={continueDownloadGate}
       />
@@ -4348,6 +4353,7 @@ tr.foot-l td.foot-lbl,tr.foot-l td.foot-val{background:#D6E4F0;color:#1F4E79;fon
         label="Image upload processing"
         seconds={0}
         videoUrl={adConfig.videoUrl}
+        adClient={adConfig.adClient}
         onClose={() => setUploadAdOpen(false)}
         onContinue={() => {}}
         processing={true}
