@@ -776,7 +776,7 @@ Never output sqft rows with d2 missing when title and pattern indicate rnft/grov
 `;
 
 async function callLocalExtractionAPI(imageData, mediaType, systemPrompt) {
-  const savedKey = localStorage.getItem("mf_anthropic_key") || "";
+  const savedKey = localStorage.getItem("mf_ai_key") || localStorage.getItem("mf_anthropic_key") || "";
   let resp;
   try {
     resp = await fetch(getApiUrl("/api/extract"), {
@@ -796,7 +796,7 @@ async function callLocalExtractionAPI(imageData, mediaType, systemPrompt) {
   const payload = await resp.json().catch(() => ({}));
   const code = payload?.error?.type || "";
   if (!resp.ok || payload.ok === false || payload.error) {
-    if (code === "authentication_error") throw new Error("API key error. Start the local API with ANTHROPIC_API_KEY, or save a valid key in the browser and try again.");
+    if (code === "authentication_error") throw new Error("AI provider key error. Set GEMINI_API_KEY or another configured provider on the backend, then redeploy and try again.");
     if (code === "rate_limit_error") throw new Error("Rate limit reached. Please wait a minute and try again.");
     if (code === "overloaded_error") throw new Error("AI servers are overloaded. Please try again in a minute.");
     if (code === "not_found") throw new Error("Local API not running. Start it with: npm run api");
@@ -1043,14 +1043,14 @@ function AutoAdBanner({ adClient, slot = "auto", side = "right", activeTab, cont
     return () => window.removeEventListener("resize", onResize);
   }, []);
 
-  if (!adClient || mobile) return null;
+  if (!adClient || mobile || activeTab === "admin") return null;
 
   const gutterWidth = Math.max(120, ((viewportWidth - contentWidth) / 2) - 18);
   const railWidth = activeTab === "bill" || activeTab === "rates"
     ? Math.max(120, Math.floor(gutterWidth * 0.98))
     : 163;
-  const blockCount = activeTab === "measure" ? 4 : 6;
-  const blockHeight = activeTab === "measure" ? 280 : 320;
+  const blockCount = activeTab === "measure" ? 2 : 3;
+  const blockHeight = activeTab === "measure" ? 260 : 300;
 
   return (
     <div className="noprint" style={{ width: railWidth, flex: `0 0 ${railWidth}px`, alignSelf: "stretch" }}>
@@ -3394,8 +3394,8 @@ function DownloadGateModal({ open, label, seconds, videoUrl, onClose, onContinue
       <div style={{ width: "min(920px, 100%)", background: "#fff", borderRadius: 18, overflow: "hidden", boxShadow: "0 22px 70px rgba(15,23,42,.45)" }}>
         <div style={{ background: "#1F4E79", color: "#fff", padding: "14px 18px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div>
-            <div style={{ fontSize: 18, fontWeight: "bold" }}>Sponsored Break</div>
-            <div style={{ fontSize: 12, opacity: 0.9 }}>{isUpload ? "Your upload will continue after this short monetization step." : "Your download will start after this short monetization step."}</div>
+            <div style={{ fontSize: 18, fontWeight: "bold" }}>MeasureFlow Support</div>
+            <div style={{ fontSize: 12, opacity: 0.9 }}>{isUpload ? "Your upload will continue after this short support screen." : "Your download will start after this short support screen."}</div>
           </div>
           {!processing && (
             <button onClick={onClose} style={{ background: "rgba(255,255,255,.12)", color: "#fff", border: "none", borderRadius: 8, padding: "7px 10px", cursor: "pointer", fontWeight: "bold" }}>
@@ -3415,15 +3415,15 @@ function DownloadGateModal({ open, label, seconds, videoUrl, onClose, onContinue
               />
             ) : (
               <div style={{ height: "100%", minHeight: 320, display: "flex", alignItems: "center", justifyContent: "center", color: "#cbd5e1", padding: 24, textAlign: "center" }}>
-                Please wait while sponsored content is shown before download
+                Please wait while support content is shown before download
               </div>
             )}
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             <div style={{ background: "#f8fafc", border: "1px solid #dbeafe", borderRadius: 14, padding: 16 }}>
-              <div style={{ fontSize: 12, color: "#64748b", marginBottom: 6 }}>Sponsored Content</div>
+              <div style={{ fontSize: 12, color: "#64748b", marginBottom: 6 }}>Support Message</div>
               <div style={{ fontWeight: "bold", color: "#1F4E79", marginBottom: 10 }}>
-                {isUpload ? "Your upload will continue after this short sponsored break" : "Your download will continue after this short sponsored break"}
+                {isUpload ? "Your upload will continue after this short support screen" : "Your download will continue after this short support screen"}
               </div>
               <div style={{ fontSize: 12, color: "#64748b" }}>
                 Thank you for supporting MeasureFlow.
@@ -3497,7 +3497,7 @@ export default function App() {
   const [adminMode, setAdminMode] = useState(() => typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("admin") === "1" : false);
   const [adConfig, setAdConfig] = useState({
     enabled: true,
-    gateEnabled: true,
+    gateEnabled: false,
     adClient: "",
     gateSeconds: 6,
     videoUrl: "",
