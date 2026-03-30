@@ -4682,6 +4682,8 @@ tr.foot-l td.foot-lbl,tr.foot-l td.foot-val{background:#D6E4F0;color:#1F4E79;fon
               <InlineAdStrip adClient={adConfig.adClient} minHeight={150} label="Supported Links" />
               <InlineAdStrip adClient={adConfig.adClient} minHeight={150} label="Supported Links" />
               <InlineAdStrip adClient={adConfig.adClient} minHeight={150} label="Supported Links" />
+              <InlineAdStrip adClient={adConfig.adClient} minHeight={150} label="Supported Links" />
+              <InlineAdStrip adClient={adConfig.adClient} minHeight={150} label="Supported Links" />
             </div>
 
           </>
@@ -4741,6 +4743,8 @@ tr.foot-l td.foot-lbl,tr.foot-l td.foot-val{background:#D6E4F0;color:#1F4E79;fon
               </div>
             </div>
             <div className="noprint" style={{ margin: "0 auto 12px", maxWidth: 1040, display: "flex", flexDirection: "column", gap: 12 }}>
+              <InlineAdStrip adClient={adConfig.adClient} minHeight={150} label="Sponsored" />
+              <InlineAdStrip adClient={adConfig.adClient} minHeight={150} label="Sponsored" />
               <InlineAdStrip adClient={adConfig.adClient} minHeight={150} label="Sponsored" />
               <InlineAdStrip adClient={adConfig.adClient} minHeight={150} label="Sponsored" />
               <InlineAdStrip adClient={adConfig.adClient} minHeight={150} label="Sponsored" />
