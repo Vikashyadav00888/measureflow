@@ -4022,6 +4022,26 @@ export default function App() {
     if (path !== "/") setActiveTab("measure");
   }
 
+  function openAppTab(tabId) {
+    if (typeof window === "undefined") return;
+    if (pagePath !== "/") {
+      const query = adminMode ? "?admin=1" : "";
+      window.history.pushState({}, "", `/${query}`);
+      setPagePath("/");
+    }
+    setActiveTab(tabId);
+  }
+
+  const headerNavItems = [
+    { key: "measure", kind: "tab", label: t("ðŸ“ Measure", "ðŸ“ à¤®à¤¾à¤ª") },
+    { key: "bill", kind: "tab", label: t("ðŸ§¾ Bill", "ðŸ§¾ à¤¬à¤¿à¤²") },
+    { key: "rates", kind: "tab", label: t("ðŸ’° Rates", "ðŸ’° à¤°à¥‡à¤Ÿ") },
+    { key: "/about", kind: "route", label: "About" },
+    { key: "/contact", kind: "route", label: "Contact" },
+    ...(adminMode ? [{ key: "admin", kind: "tab", label: t("ðŸ›¡ Admin", "ðŸ›¡ à¤à¤¡à¤®à¤¿à¤¨") }] : []),
+  ];
+  const activeHeaderKey = isStaticPage ? pagePath : activeTab;
+
   useEffect(() => {
     if (adminMode) setActiveTab("admin");
   }, [adminMode]);
@@ -4884,7 +4904,7 @@ tr.foot-l td.foot-lbl,tr.foot-l td.foot-val{background:#D6E4F0;color:#1F4E79;fon
 
       {/* TOP BAR */}
       <div className="noprint mf-topbar" style={{ background: C.dark, padding: "0 22px", display: "flex", alignItems: "center", justifyContent: "space-between", height: 54, boxShadow: "0 2px 16px rgba(31,78,121,.4)", position: "sticky", top: 0, zIndex: 100 }}>
-        <div className="mf-topbar-inner" style={{ color: "#fff", fontSize: 18, fontWeight: "bold", letterSpacing: 1, display: "flex", alignItems: "center", gap: 8 }}>
+        <div className="mf-topbar-inner" onClick={() => navigateTo("/")} style={{ color: "#fff", fontSize: 18, fontWeight: "bold", letterSpacing: 1, display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
           <div style={{ background: C.mid, borderRadius: 8, width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}>📐</div>
           <span className="mf-brand-text">MeasureFlow</span>
         </div>
@@ -4899,23 +4919,33 @@ tr.foot-l td.foot-lbl,tr.foot-l td.foot-val{background:#D6E4F0;color:#1F4E79;fon
               }}>{l}</button>
             ))}
           </div>
-          {/* Mode tabs */}
-          <div style={{ display:"flex", background:"rgba(255,255,255,.12)", borderRadius:8, padding:2, gap:2 }}>
+          <div className="mf-tab-group" style={{ display:"flex", background:"rgba(255,255,255,.12)", borderRadius:8, padding:2, gap:2 }}>
+            {headerNavItems.map((item) => (
+              <button key={item.key} onClick={() => item.kind === "route" ? navigateTo(item.key) : openAppTab(item.key)} style={{
+                background: activeHeaderKey===item.key ? "#fff" : "transparent",
+                color: activeHeaderKey===item.key ? C.dark : "#93c5fd",
+                border:"none", borderRadius:6, padding:"5px 14px",
+                fontWeight:"bold", fontSize:13, cursor:"pointer", transition:"all .15s"
+              }}>{item.label}</button>
+            ))}
+          </div>
+          {/* Legacy split nav hidden after unifying header state */}
+          {false && !isStaticPage && <div style={{ display:"flex", background:"rgba(255,255,255,.12)", borderRadius:8, padding:2, gap:2 }}>
             {[
               { id:"measure", label:t("📐 Measure","📐 माप") },
               { id:"bill",    label:t("🧾 Bill","🧾 बिल") },
               { id:"rates",   label:t("💰 Rates","💰 रेट") },
               ...(adminMode ? [{ id:"admin", label:t("🛡 Admin","🛡 एडमिन") }] : []),
             ].map(tab => (
-              <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{
-                background: activeTab===tab.id ? "#fff" : "transparent",
-                color: activeTab===tab.id ? C.dark : "#93c5fd",
+              <button key={tab.id} onClick={() => openAppTab(tab.id)} style={{
+                background: !isStaticPage && activeTab===tab.id ? "#fff" : "transparent",
+                color: !isStaticPage && activeTab===tab.id ? C.dark : "#93c5fd",
                 border:"none", borderRadius:6, padding:"5px 14px",
                 fontWeight:"bold", fontSize:13, cursor:"pointer", transition:"all .15s"
               }}>{tab.label}</button>
             ))}
-          </div>
-          <div className="mf-tab-group" style={{ display:"flex", background:"rgba(255,255,255,.12)", borderRadius:8, padding:2, gap:2 }}>
+          </div>}
+          {false && isStaticPage && <div className="mf-tab-group" style={{ display:"flex", background:"rgba(255,255,255,.12)", borderRadius:8, padding:2, gap:2 }}>
             {[
               { path:"/", label:"Home" },
               { path:"/about", label:"About" },
@@ -4928,11 +4958,11 @@ tr.foot-l td.foot-lbl,tr.foot-l td.foot-val{background:#D6E4F0;color:#1F4E79;fon
                 fontWeight:"bold", fontSize:13, cursor:"pointer", transition:"all .15s"
               }}>{link.label}</button>
             ))}
-          </div>
-          {activeTab==="measure" && hasSessions && <>
+          </div>}
+          {!isStaticPage && activeTab==="measure" && hasSessions && <>
             <button style={btn(C.mid, true)} onClick={saveSession}>{saveLabel}</button>
           </>}
-          {activeTab==="bill" && <>
+          {!isStaticPage && activeTab==="bill" && <>
             <button style={btn("#1e3a5f", true)} disabled={billBusy} onClick={launchBillDocx}>
               🧾 {billBusy ? "Building…" : "Download Bill (.docx)"}
             </button>
