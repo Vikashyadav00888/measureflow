@@ -1160,6 +1160,62 @@ function StaticPageAdCard({ adClient, title = "Sponsored", subtitle = "Support M
   );
 }
 
+function HomeAdDeck({ adClient, variant = "empty" }) {
+  const [width, setWidth] = useState(() => typeof window !== "undefined" ? window.innerWidth : 1280);
+
+  useEffect(() => {
+    const onResize = () => setWidth(window.innerWidth);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
+  if (!adClient) return null;
+
+  const compact = width <= 700;
+  const gridCols = compact ? "1fr" : "1fr 1fr";
+  const cards = variant === "results"
+    ? [
+        { title: "Sponsored", subtitle: "Export and reporting tools", accent: "#1F4E79", height: 150 },
+        { title: "Sponsored", subtitle: "Services for contractors", accent: "#0f766e", height: 150 },
+        { title: "Sponsored", subtitle: "Site workflow support", accent: "#7c3aed", height: 150 },
+      ]
+    : [
+        { title: "Sponsored", subtitle: "Featured tools for measurement teams", accent: "#2E75B6", height: 180 },
+        { title: "Sponsored", subtitle: "Billing and export support", accent: "#1F4E79", height: 150 },
+        { title: "Sponsored", subtitle: "Solutions for site businesses", accent: "#0f766e", height: 150 },
+        { title: "Sponsored", subtitle: "Contractor services and tools", accent: "#7c3aed", height: 150 },
+        { title: "Sponsored", subtitle: "Project workflow partners", accent: "#c2410c", height: 150 },
+      ];
+
+  const [hero, ...rest] = cards;
+
+  return (
+    <div className="noprint" style={{ maxWidth: 1040, margin: "0 auto 16px", display: "grid", gap: 14 }}>
+      <StaticPageAdCard
+        adClient={adClient}
+        title={hero.title}
+        subtitle={hero.subtitle}
+        minHeight={hero.height}
+        accent={hero.accent}
+      />
+      {rest.length > 0 && (
+        <div className="mf-two-col-grid" style={{ display: "grid", gridTemplateColumns: gridCols, gap: 14 }}>
+          {rest.map((card, idx) => (
+            <StaticPageAdCard
+              key={`${card.subtitle}-${idx}`}
+              adClient={adClient}
+              title={card.title}
+              subtitle={card.subtitle}
+              minHeight={card.height}
+              accent={card.accent}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function RowEditor({ row, idx, sessId, onUpdate, onRemove, theme }) {
   const T = theme || THEMES.melamine;
   // Local state so inputs are fully controlled and responsive
@@ -5079,7 +5135,7 @@ tr.foot-l td.foot-lbl,tr.foot-l td.foot-val{background:#D6E4F0;color:#1F4E79;fon
                 </button>
               ))}
             </div>
-            <CenterAdStack adClient={adConfig.adClient} minHeight={150} label="Supported Links" desktopCount={5} />
+            <HomeAdDeck adClient={adConfig.adClient} variant="results" />
 
           </>
         )}
@@ -5137,7 +5193,7 @@ tr.foot-l td.foot-lbl,tr.foot-l td.foot-val{background:#D6E4F0;color:#1F4E79;fon
                 ))}
               </div>
             </div>
-            <CenterAdStack adClient={adConfig.adClient} minHeight={150} label="Sponsored" desktopCount={5} />
+            <HomeAdDeck adClient={adConfig.adClient} variant="empty" />
           </div>
         )}
         </>
