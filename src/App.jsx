@@ -1131,29 +1131,31 @@ function CenterAdStack({ adClient, label = "Sponsored", minHeight = 150, desktop
   );
 }
 
-function StaticPageAdCard({ adClient, title = "Sponsored", subtitle = "Support MeasureFlow", minHeight = 220 }) {
+function StaticPageAdCard({ adClient, title = "Sponsored", subtitle = "Support MeasureFlow", minHeight = 220, accent = "#1F4E79" }) {
   if (!adClient) return null;
   return (
     <div
       className="noprint"
       style={{
-        background: "linear-gradient(180deg, #f8fbff, #eef6ff)",
-        border: "1px solid #d6e4f0",
-        borderRadius: 16,
-        padding: 14,
-        boxShadow: "0 10px 24px rgba(31,78,121,.08)",
+        background: `linear-gradient(180deg, ${accent}12, #ffffff)`,
+        border: `1px solid ${accent}33`,
+        borderRadius: 18,
+        padding: 16,
+        boxShadow: "0 14px 32px rgba(31,78,121,.10)",
       }}
     >
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10, gap: 10, flexWrap: "wrap" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, gap: 10, flexWrap: "wrap" }}>
         <div>
-          <div style={{ fontSize: 10, color: "#64748b", letterSpacing: ".08em", textTransform: "uppercase", marginBottom: 4 }}>{title}</div>
-          <div style={{ fontSize: 18, fontWeight: "bold", color: "#1F4E79" }}>{subtitle}</div>
+          <div style={{ fontSize: 10, color: accent, letterSpacing: ".08em", textTransform: "uppercase", marginBottom: 4, fontWeight: "bold" }}>{title}</div>
+          <div style={{ fontSize: 20, fontWeight: "bold", color: accent }}>{subtitle}</div>
         </div>
-        <div style={{ fontSize: 12, color: "#64748b", maxWidth: 240, textAlign: "right" }}>
+        <div style={{ fontSize: 12, color: "#64748b", maxWidth: 260, textAlign: "right", lineHeight: 1.7 }}>
           Carefully placed sponsor content that helps keep the platform available for public use.
         </div>
       </div>
-      <InlineAdStrip adClient={adClient} minHeight={minHeight} label={title} />
+      <div style={{ background: "#fff", borderRadius: 14, padding: 10, border: "1px solid #e2e8f0" }}>
+        <InlineAdStrip adClient={adClient} minHeight={minHeight} label={title} />
+      </div>
     </div>
   );
 }
@@ -3589,6 +3591,9 @@ function AboutPage({ adClient }) {
       <p>
         MeasureFlow is a web-based measurement and billing tool built to help contractors, polish teams, painters, and site supervisors manage day-to-day quantity work in a faster and cleaner way. It combines measurement capture, rate management, bill preparation, and export tools into a single workflow so site notes can become organized documents without extra spreadsheet work.
       </p>
+      <div style={{ margin: "14px 0 18px" }}>
+        <StaticPageAdCard adClient={adClient} title="Sponsored" subtitle="Featured tools for measurement teams" minHeight={170} accent="#2E75B6" />
+      </div>
       <div className="mf-two-col-grid" style={{ display: "grid", gridTemplateColumns: "1.1fr .9fr", gap: 18, margin: "18px 0 20px" }}>
         <div style={{ display: "grid", gap: 14 }}>
           <div style={{ background: "#f8fafc", border: "1px solid #dbeafe", borderRadius: 14, padding: 18 }}>
@@ -3604,7 +3609,7 @@ function AboutPage({ adClient }) {
             </div>
           </div>
         </div>
-        <StaticPageAdCard adClient={adClient} title="Sponsored" subtitle="Tools & services for contractors" minHeight={280} />
+        <StaticPageAdCard adClient={adClient} title="Sponsored" subtitle="Tools & services for contractors" minHeight={280} accent="#1F4E79" />
       </div>
       <p>
         The app is designed for practical use on real jobs where teams often work with handwritten measurement notes, mixed measurement types like sqft, rnft, and groove, and changing project rates. MeasureFlow helps convert those measurements into editable sections, summaries, bills, and downloadable files that are easier to review, share, and archive.
@@ -3613,7 +3618,7 @@ function AboutPage({ adClient }) {
         It is made for small and medium contracting businesses, polish and paint professionals, furniture-finishing teams, and project coordinators who want a more reliable digital workflow without losing the familiar structure of site measurement books. The focus is on simple operation, export-ready outputs, and faster billing from real site data.
       </p>
       <div style={{ marginTop: 18 }}>
-        <StaticPageAdCard adClient={adClient} title="Sponsored" subtitle="Business support for project teams" minHeight={190} />
+        <StaticPageAdCard adClient={adClient} title="Sponsored" subtitle="Business support for project teams" minHeight={190} accent="#0f766e" />
       </div>
     </StaticPageShell>
   );
@@ -3628,6 +3633,9 @@ function PrivacyPolicyPage({ adClient }) {
       <p>
         MeasureFlow may collect limited technical and usage information to improve app reliability, understand feature usage, and support analytics for the site owner. This may include browser details, device identifiers, page activity, upload and download events, and related technical metadata required to keep the service operational and to improve the product experience.
       </p>
+      <div style={{ margin: "14px 0 18px" }}>
+        <StaticPageAdCard adClient={adClient} title="Sponsored" subtitle="Compliance and operations tools" minHeight={170} accent="#0f766e" />
+      </div>
       <div className="mf-two-col-grid" style={{ display: "grid", gridTemplateColumns: "1.1fr .9fr", gap: 18, margin: "18px 0 20px" }}>
         <div style={{ display: "grid", gap: 14 }}>
           <div style={{ background: "#f8fafc", border: "1px solid #dbeafe", borderRadius: 14, padding: 18 }}>
@@ -3643,7 +3651,7 @@ function PrivacyPolicyPage({ adClient }) {
             </div>
           </div>
         </div>
-        <StaticPageAdCard adClient={adClient} title="Sponsored" subtitle="Privacy-safe tools for digital businesses" minHeight={280} />
+        <StaticPageAdCard adClient={adClient} title="Sponsored" subtitle="Privacy-safe tools for digital businesses" minHeight={280} accent="#1F4E79" />
       </div>
       <p>
         The website may use cookies and similar technologies for essential app functionality, analytics, and advertising. MeasureFlow may display advertising through Google AdSense and other third-party advertising partners. These providers may use cookies, device identifiers, and similar technologies to serve and measure ads, personalize ad delivery where allowed, and understand how users interact with the website. Google may use advertising cookies to serve ads based on prior visits to this site or other websites.
@@ -3658,7 +3666,7 @@ function PrivacyPolicyPage({ adClient }) {
         Users may have rights under applicable privacy laws, including the right to request access, correction, or deletion of personal data where legally required. Users may also be able to control cookies through browser settings and available consent tools. To make a privacy-related request or enquiry, please contact the site operator using the contact details provided on the Contact page.
       </p>
       <div style={{ marginTop: 18 }}>
-        <StaticPageAdCard adClient={adClient} title="Sponsored" subtitle="Business services and compliance support" minHeight={190} />
+        <StaticPageAdCard adClient={adClient} title="Sponsored" subtitle="Business services and compliance support" minHeight={190} accent="#7c3aed" />
       </div>
     </StaticPageShell>
   );
@@ -3681,6 +3689,9 @@ function ContactPage({ adClient }) {
       title="Contact MeasureFlow"
       subtitle="For support, business enquiries, or product feedback, use the form below or contact us directly."
     >
+      <div style={{ margin: "0 0 18px" }}>
+        <StaticPageAdCard adClient={adClient} title="Sponsored" subtitle="Services for growing contractor businesses" minHeight={165} accent="#7c3aed" />
+      </div>
       <div className="mf-two-col-grid" style={{ display: "grid", gridTemplateColumns: "1.1fr .9fr", gap: 18 }}>
         <form onSubmit={submit} style={{ display: "grid", gap: 12 }}>
           <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" style={{ border: "1px solid #cbd5e1", borderRadius: 8, padding: "10px 12px", fontSize: 14, outline: "none" }} />
@@ -3703,7 +3714,7 @@ function ContactPage({ adClient }) {
         </div>
       </div>
       <div style={{ marginTop: 20 }}>
-        <StaticPageAdCard adClient={adClient} title="Sponsored" subtitle="Relevant tools for site teams" minHeight={210} />
+        <StaticPageAdCard adClient={adClient} title="Sponsored" subtitle="Relevant tools for site teams" minHeight={210} accent="#1F4E79" />
       </div>
     </StaticPageShell>
   );
@@ -4875,7 +4886,7 @@ tr.foot-l td.foot-lbl,tr.foot-l td.foot-val{background:#D6E4F0;color:#1F4E79;fon
       </div>
 
       <div className="noprint mf-main-shell" style={{ maxWidth: "100%", margin: "0 auto", padding: "18px 14px", display: "flex", gap: 14, alignItems: "flex-start", justifyContent: "center" }}>
-        <AutoAdBanner adClient={adConfig.adClient} side="left" activeTab={activeTab} />
+        <AutoAdBanner adClient={adConfig.adClient} side="left" activeTab={isStaticPage ? "static" : activeTab} />
         <div className="mf-content-wrap" style={{ maxWidth: 1160, width: "100%" }}>
 
         {isStaticPage ? (
@@ -5132,7 +5143,7 @@ tr.foot-l td.foot-lbl,tr.foot-l td.foot-val{background:#D6E4F0;color:#1F4E79;fon
         </>
         )}
         </div>
-        <AutoAdBanner adClient={adConfig.adClient} side="right" activeTab={activeTab} />
+        <AutoAdBanner adClient={adConfig.adClient} side="right" activeTab={isStaticPage ? "static" : activeTab} />
       </div>
       <SiteFooter onNavigate={navigateTo} />
     </div>
