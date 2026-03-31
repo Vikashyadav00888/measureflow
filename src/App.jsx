@@ -4042,6 +4042,14 @@ export default function App() {
     ...(adminMode ? [{ key: "admin", kind: "tab", label: t("ðŸ›¡ Admin", "ðŸ›¡ à¤à¤¡à¤®à¤¿à¤¨") }] : []),
   ];
   const activeHeaderKey = isStaticPage ? pagePath : activeTab;
+  const cleanHeaderNavItems = [
+    { key: "measure", kind: "tab", label: t("Measure", "माप") },
+    { key: "bill", kind: "tab", label: t("Bill", "बिल") },
+    { key: "rates", kind: "tab", label: t("Rates", "रेट") },
+    { key: "/about", kind: "route", label: "About" },
+    { key: "/contact", kind: "route", label: "Contact" },
+    ...(adminMode ? [{ key: "admin", kind: "tab", label: t("Admin", "एडमिन") }] : []),
+  ];
 
   useEffect(() => {
     if (adminMode) setActiveTab("admin");
@@ -4920,7 +4928,7 @@ tr.foot-l td.foot-lbl,tr.foot-l td.foot-val{background:#D6E4F0;color:#1F4E79;fon
             ))}
           </div>
           <div className="mf-tab-group" style={{ display:"flex", background:"rgba(255,255,255,.12)", borderRadius:8, padding:2, gap:2 }}>
-            {headerNavItems.map((item) => (
+            {cleanHeaderNavItems.map((item) => (
               <button key={item.key} onClick={() => item.kind === "route" ? navigateTo(item.key) : openAppTab(item.key)} style={{
                 background: activeHeaderKey===item.key ? "#fff" : "transparent",
                 color: activeHeaderKey===item.key ? C.dark : "#93c5fd",
