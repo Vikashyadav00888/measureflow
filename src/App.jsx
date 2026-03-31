@@ -1049,7 +1049,7 @@ function AutoAdBanner({ adClient, slot = "auto", side = "right", activeTab, cont
   const railWidth = activeTab === "bill" || activeTab === "rates"
     ? Math.max(120, Math.floor(gutterWidth * 0.98))
     : 163;
-  const blockCount = activeTab === "measure" ? 6 : 5;
+  const blockCount = activeTab === "measure" ? 4 : 5;
   const blockHeight = activeTab === "measure" ? 185 : 290;
 
   return (
