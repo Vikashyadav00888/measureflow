@@ -3234,6 +3234,7 @@ function BillView({
         {(manualItems||[]).length === 0 ? (
           <div style={{ padding:"10px 14px", color:"#94a3b8", fontSize:13 }}>No manual items. Click + Add to add a free-form bill row.</div>
         ) : (
+        <>
           <div style={{ overflowX:"auto" }}>
             <table style={{ width:"100%", borderCollapse:"collapse", fontSize:13 }}>
               <thead>
@@ -3268,6 +3269,7 @@ function BillView({
               </tbody>
             </table>
           </div>
+        </>
         )}
       </div>
 
@@ -3509,6 +3511,151 @@ function AdminPanel({ lang = "en", analyticsEnabled }) {
   );
 }
 
+const SUPPORT_EMAIL = "vikashyadav00888@gmail.com";
+const PUBLIC_PAGE_PATHS = ["/", "/about", "/contact", "/privacy-policy"];
+
+function getMetaContent(pathname) {
+  const origin = typeof window !== "undefined" ? window.location.origin : "https://measureflow.vercel.app";
+  const url = `${origin}${pathname === "/" ? "" : pathname}`;
+  const map = {
+    "/": {
+      title: "MeasureFlow v2.0 | Construction Measurement and Billing Tool",
+      description: "MeasureFlow helps contractors and finishing teams capture measurements, generate bills, manage rates, and export polished reports from one workspace.",
+    },
+    "/about": {
+      title: "About MeasureFlow | Measurement Software for Contractors",
+      description: "Learn what MeasureFlow does, who it is built for, and how it supports painting, polish, laminate, and site billing workflows.",
+    },
+    "/contact": {
+      title: "Contact MeasureFlow | Support and Enquiries",
+      description: "Contact the MeasureFlow team for support, business enquiries, and help using the construction measurement and billing app.",
+    },
+    "/privacy-policy": {
+      title: "Privacy Policy | MeasureFlow",
+      description: "Read the MeasureFlow privacy policy covering cookies, analytics, Google AdSense advertising, data usage, and user rights.",
+    },
+  };
+  const meta = map[pathname] || map["/"];
+  return { ...meta, url };
+}
+
+function StaticPageShell({ title, subtitle, children }) {
+  return (
+    <div style={{ maxWidth: 980, margin: "0 auto", background: "#fff", border: "1px solid #dbeafe", borderRadius: 16, boxShadow: "0 8px 28px rgba(15,23,42,.08)", overflow: "hidden" }}>
+      <div style={{ background: "linear-gradient(135deg, #1F4E79, #2E75B6)", color: "#fff", padding: "22px 24px" }}>
+        <div style={{ fontSize: 28, fontWeight: "bold", marginBottom: 6 }}>{title}</div>
+        {subtitle && <div style={{ fontSize: 14, opacity: 0.9, lineHeight: 1.6 }}>{subtitle}</div>}
+      </div>
+      <div className="mf-static-page-body" style={{ padding: "22px 24px", color: "#334155", lineHeight: 1.8, fontSize: 14 }}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function AboutPage() {
+  return (
+    <StaticPageShell
+      title="About MeasureFlow"
+      subtitle="Construction measurement, billing, and rate management for contractors and finishing teams."
+    >
+      <p>
+        MeasureFlow is a web-based measurement and billing tool built to help contractors, polish teams, painters, and site supervisors manage day-to-day quantity work in a faster and cleaner way. It combines measurement capture, rate management, bill preparation, and export tools into a single workflow so site notes can become organized documents without extra spreadsheet work.
+      </p>
+      <p>
+        The app is designed for practical use on real jobs where teams often work with handwritten measurement notes, mixed measurement types like sqft, rnft, and groove, and changing project rates. MeasureFlow helps convert those measurements into editable sections, summaries, bills, and downloadable files that are easier to review, share, and archive.
+      </p>
+      <p>
+        It is made for small and medium contracting businesses, polish and paint professionals, furniture-finishing teams, and project coordinators who want a more reliable digital workflow without losing the familiar structure of site measurement books. The focus is on simple operation, export-ready outputs, and faster billing from real site data.
+      </p>
+    </StaticPageShell>
+  );
+}
+
+function PrivacyPolicyPage() {
+  return (
+    <StaticPageShell
+      title="Privacy Policy"
+      subtitle="How MeasureFlow handles cookies, advertising, analytics, and user information."
+    >
+      <p>
+        MeasureFlow may collect limited technical and usage information to improve app reliability, understand feature usage, and support analytics for the site owner. This may include browser details, device identifiers, page activity, upload and download events, and related technical metadata required to keep the service operational and to improve the product experience.
+      </p>
+      <p>
+        The website may use cookies and similar technologies for essential app functionality, analytics, and advertising. MeasureFlow may display advertising through Google AdSense and other third-party advertising partners. These providers may use cookies, device identifiers, and similar technologies to serve and measure ads, personalize ad delivery where allowed, and understand how users interact with the website. Google may use advertising cookies to serve ads based on prior visits to this site or other websites.
+      </p>
+      <p>
+        MeasureFlow may also use analytics tools to understand traffic, feature usage, and user activity trends. Analytics data may include page visits, referral details, session information, approximate location data derived from network information, and interaction events. This data is used to maintain and improve the service, monitor performance, and support product and business operations.
+      </p>
+      <p>
+        If users submit measurements, text, or contact messages through the app, that content may be processed to provide the requested functionality. Users should avoid entering highly sensitive personal data unless necessary for their own workflow. Uploaded content may be processed by configured AI providers to support measurement extraction features.
+      </p>
+      <p>
+        Users may have rights under applicable privacy laws, including the right to request access, correction, or deletion of personal data where legally required. Users may also be able to control cookies through browser settings and available consent tools. To make a privacy-related request or enquiry, please contact the site operator using the contact details provided on the Contact page.
+      </p>
+    </StaticPageShell>
+  );
+}
+
+function ContactPage() {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [message, setMessage] = useState("");
+
+  const submit = (e) => {
+    e.preventDefault();
+    const subject = encodeURIComponent(`MeasureFlow enquiry from ${name || "Website visitor"}`);
+    const body = encodeURIComponent(`Name: ${name}\nEmail: ${email}\n\nMessage:\n${message}`);
+    window.location.href = `mailto:${SUPPORT_EMAIL}?subject=${subject}&body=${body}`;
+  };
+
+  return (
+    <StaticPageShell
+      title="Contact MeasureFlow"
+      subtitle="For support, business enquiries, or product feedback, use the form below or contact us directly."
+    >
+      <div className="mf-two-col-grid" style={{ display: "grid", gridTemplateColumns: "1.1fr .9fr", gap: 18 }}>
+        <form onSubmit={submit} style={{ display: "grid", gap: 12 }}>
+          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" style={{ border: "1px solid #cbd5e1", borderRadius: 8, padding: "10px 12px", fontSize: 14, outline: "none" }} />
+          <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Your email" style={{ border: "1px solid #cbd5e1", borderRadius: 8, padding: "10px 12px", fontSize: 14, outline: "none" }} />
+          <textarea value={message} onChange={(e) => setMessage(e.target.value)} placeholder="Your message" rows={7} style={{ border: "1px solid #cbd5e1", borderRadius: 8, padding: "10px 12px", fontSize: 14, outline: "none", resize: "vertical", fontFamily: "inherit" }} />
+          <button type="submit" style={{ ...btn("#1F4E79"), justifyContent: "center" }}>Send Message</button>
+        </form>
+        <div style={{ background: "#f8fafc", border: "1px solid #dbeafe", borderRadius: 12, padding: 18 }}>
+          <div style={{ fontSize: 18, fontWeight: "bold", color: "#1F4E79", marginBottom: 10 }}>Contact Details</div>
+          <div style={{ marginBottom: 12 }}>Email: <a href={`mailto:${SUPPORT_EMAIL}`} style={{ color: "#2E75B6", fontWeight: "bold" }}>{SUPPORT_EMAIL}</a></div>
+          <div style={{ fontSize: 13, color: "#64748b" }}>
+            Use the contact form to open your mail app with the message details prefilled, or send a direct email using the address above.
+          </div>
+        </div>
+      </div>
+    </StaticPageShell>
+  );
+}
+
+function SiteFooter({ onNavigate }) {
+  const links = [
+    { label: "Privacy Policy", path: "/privacy-policy" },
+    { label: "About Us", path: "/about" },
+    { label: "Contact Us", path: "/contact" },
+  ];
+
+  return (
+    <footer className="noprint" style={{ marginTop: 28, borderTop: "1px solid #dbeafe", background: "#fff", padding: "18px 14px 26px" }}>
+      <div style={{ maxWidth: 1160, margin: "0 auto", display: "flex", gap: 14, justifyContent: "space-between", alignItems: "center", flexWrap: "wrap" }}>
+        <div style={{ color: "#64748b", fontSize: 13 }}>MeasureFlow v2.0 · Construction measurement and billing software</div>
+        <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
+          {links.map((link) => (
+            <button key={link.path} onClick={() => onNavigate(link.path)} style={{ background: "none", border: "none", color: "#1F4E79", fontWeight: "bold", cursor: "pointer", padding: 0 }}>
+              {link.label}
+            </button>
+          ))}
+        </div>
+      </div>
+    </footer>
+  );
+}
+
 function DownloadGateModal({ open, label, seconds, videoUrl, adClient, onClose, onContinue, processing = false, processingText = "" }) {
   const [remaining, setRemaining] = useState(seconds);
   const isUpload = processing || /upload/i.test(label || "");
@@ -3636,6 +3783,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('measure'); // 'measure' | 'bill' | 'rates'
   const [lang, setLang] = useState("en");
   const [analyticsEnabled, setAnalyticsEnabled] = useState(false);
+  const [pagePath, setPagePath] = useState(() => typeof window !== "undefined" ? window.location.pathname : "/");
   const [adminMode, setAdminMode] = useState(() => typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("admin") === "1" : false);
   const [adConfig, setAdConfig] = useState({
     enabled: true,
@@ -3650,6 +3798,7 @@ export default function App() {
   const logoRef = useRef();
   const importRef = useRef();
   const pendingDownloadRef = useRef(null);
+  const isStaticPage = pagePath === "/about" || pagePath === "/contact" || pagePath === "/privacy-policy";
 
   // No auto-load on startup — app always opens fresh/empty
 
@@ -3691,6 +3840,44 @@ export default function App() {
   useEffect(() => {
     trackAnalyticsEvent("tab_view", activeTab, { adminMode });
   }, [activeTab, adminMode]);
+
+  useEffect(() => {
+    const onPop = () => {
+      setPagePath(window.location.pathname);
+      setAdminMode(new URLSearchParams(window.location.search).get("admin") === "1");
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+
+  useEffect(() => {
+    const meta = getMetaContent(pagePath);
+    document.title = meta.title;
+
+    const ensureMeta = (selector, attrs) => {
+      let node = document.head.querySelector(selector);
+      if (!node) {
+        node = document.createElement("meta");
+        Object.entries(attrs.findAttrs || {}).forEach(([k, v]) => node.setAttribute(k, v));
+        document.head.appendChild(node);
+      }
+      node.setAttribute(attrs.setAttr, attrs.value);
+    };
+
+    ensureMeta('meta[name="description"]', { findAttrs: { name: "description" }, setAttr: "content", value: meta.description });
+    ensureMeta('meta[property="og:title"]', { findAttrs: { property: "og:title" }, setAttr: "content", value: meta.title });
+    ensureMeta('meta[property="og:description"]', { findAttrs: { property: "og:description" }, setAttr: "content", value: meta.description });
+    ensureMeta('meta[property="og:url"]', { findAttrs: { property: "og:url" }, setAttr: "content", value: meta.url });
+  }, [pagePath]);
+
+  function navigateTo(path) {
+    if (typeof window === "undefined") return;
+    const query = path === "/" && adminMode ? "?admin=1" : "";
+    const nextUrl = `${path}${query}`;
+    window.history.pushState({}, "", nextUrl);
+    setPagePath(path);
+    if (path !== "/") setActiveTab("measure");
+  }
 
   useEffect(() => {
     if (adminMode) setActiveTab("admin");
@@ -4585,6 +4772,20 @@ tr.foot-l td.foot-lbl,tr.foot-l td.foot-val{background:#D6E4F0;color:#1F4E79;fon
               }}>{tab.label}</button>
             ))}
           </div>
+          <div className="mf-tab-group" style={{ display:"flex", background:"rgba(255,255,255,.12)", borderRadius:8, padding:2, gap:2 }}>
+            {[
+              { path:"/", label:"Home" },
+              { path:"/about", label:"About" },
+              { path:"/contact", label:"Contact" },
+            ].map((link) => (
+              <button key={link.path} onClick={() => navigateTo(link.path)} style={{
+                background: pagePath===link.path ? "#fff" : "transparent",
+                color: pagePath===link.path ? C.dark : "#93c5fd",
+                border:"none", borderRadius:6, padding:"5px 14px",
+                fontWeight:"bold", fontSize:13, cursor:"pointer", transition:"all .15s"
+              }}>{link.label}</button>
+            ))}
+          </div>
           {activeTab==="measure" && hasSessions && <>
             <button style={btn(C.mid, true)} onClick={saveSession}>{saveLabel}</button>
           </>}
@@ -4601,6 +4802,14 @@ tr.foot-l td.foot-lbl,tr.foot-l td.foot-val{background:#D6E4F0;color:#1F4E79;fon
         <AutoAdBanner adClient={adConfig.adClient} side="left" activeTab={activeTab} />
         <div className="mf-content-wrap" style={{ maxWidth: 1160, width: "100%" }}>
 
+        {isStaticPage ? (
+          <>
+            {pagePath === "/about" && <AboutPage />}
+            {pagePath === "/contact" && <ContactPage />}
+            {pagePath === "/privacy-policy" && <PrivacyPolicyPage />}
+          </>
+        ) : (
+        <>
         {/* ══ MEASURE MODE ══════════════════════════════════════════════════════ */}
         {activeTab==="measure" && <>
 
@@ -4844,9 +5053,12 @@ tr.foot-l td.foot-lbl,tr.foot-l td.foot-val{background:#D6E4F0;color:#1F4E79;fon
             <CenterAdStack adClient={adConfig.adClient} minHeight={150} label="Sponsored" desktopCount={5} />
           </div>
         )}
+        </>
+        )}
         </div>
         <AutoAdBanner adClient={adConfig.adClient} side="right" activeTab={activeTab} />
       </div>
+      <SiteFooter onNavigate={navigateTo} />
     </div>
   );
 }

@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://measureflow.vercel.app/sitemap.xml
