@@ -1216,6 +1216,146 @@ function HomeAdDeck({ adClient, variant = "empty" }) {
   );
 }
 
+function MarketplaceHomeShell({ onOpenMeasure, onJoin, onContact }) {
+  const serviceCards = [
+    { title: "Painting Contractors", subtitle: "Interior, exterior, texture, emulsion, and premium paint teams.", accent: "#2E75B6" },
+    { title: "Furniture & Polish", subtitle: "Melamine, PU, French polish, duco, lamination, and finish specialists.", accent: "#0f766e" },
+    { title: "False Ceiling", subtitle: "Gypsum, POP, panel ceiling, and commercial ceiling execution teams.", accent: "#7c3aed" },
+    { title: "Electrical Contractors", subtitle: "Residential, office, and site electrical installation and maintenance.", accent: "#c2410c" },
+    { title: "Civil Contractors", subtitle: "Renovation, masonry, structural repair, and turnkey civil packages.", accent: "#1F4E79" },
+    { title: "Interior Execution", subtitle: "Carpentry, partitions, site coordination, and finishing contractors.", accent: "#be185d" },
+  ];
+
+  const cityChips = ["Pune", "Mumbai", "Nashik", "Nagpur", "Thane", "Aurangabad"];
+
+  return (
+    <div className="noprint" style={{ display: "grid", gap: 18, marginBottom: 22 }}>
+      <div style={{
+        background: "linear-gradient(135deg,#123a63 0%, #2E75B6 48%, #dbeafe 180%)",
+        color: "#fff",
+        borderRadius: 18,
+        padding: "28px 26px",
+        boxShadow: "0 16px 40px rgba(31,78,121,.18)",
+        border: "1px solid rgba(255,255,255,.18)",
+      }}>
+        <div style={{ display: "grid", gap: 20, gridTemplateColumns: "minmax(0,1.35fr) minmax(280px,.95fr)" }} className="mf-market-hero">
+          <div style={{ display: "grid", gap: 14 }}>
+            <div style={{ display: "inline-flex", width: "fit-content", alignItems: "center", gap: 8, background: "rgba(255,255,255,.14)", borderRadius: 999, padding: "6px 12px", fontSize: 12, fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase" }}>
+              AEC Contractor Marketplace
+            </div>
+            <div style={{ fontSize: 40, lineHeight: 1.08, fontWeight: 700, fontFamily: "Georgia, 'Times New Roman', serif", maxWidth: 700 }}>
+              Find trusted contractors for paint, furniture, ceiling, electrical, civil, and interior work.
+            </div>
+            <div style={{ fontSize: 16, lineHeight: 1.75, color: "rgba(255,255,255,.88)", maxWidth: 720 }}>
+              MeasureFlow is evolving into a contractor-first platform where customers can discover service providers and contractors can manage measurements, billing, and quotations from one dashboard.
+            </div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
+              <button onClick={onContact} style={{ ...btn("#fff"), color: C.dark, boxShadow: "0 10px 24px rgba(255,255,255,.22)" }}>
+                Find Contractors
+              </button>
+              <button onClick={onJoin} style={{ ...btn("rgba(255,255,255,.12)"), border: "1px solid rgba(255,255,255,.28)" }}>
+                Join as Contractor
+              </button>
+              <button onClick={onOpenMeasure} style={{ ...btn("rgba(15,23,42,.26)"), border: "1px solid rgba(255,255,255,.18)" }}>
+                Open MeasureFlow Tools
+              </button>
+            </div>
+          </div>
+          <div style={{
+            background: "rgba(255,255,255,.12)",
+            borderRadius: 16,
+            padding: 18,
+            border: "1px solid rgba(255,255,255,.18)",
+            display: "grid",
+            gap: 14,
+            alignContent: "start",
+            backdropFilter: "blur(10px)",
+          }}>
+            <div style={{ fontWeight: 700, fontSize: 18 }}>Explore by service and city</div>
+            <div style={{ display: "grid", gap: 10 }}>
+              <div style={{ background: "rgba(255,255,255,.95)", color: "#334155", borderRadius: 12, padding: "12px 14px", fontSize: 14 }}>Service: Painting, Polish, Civil, Electrical, Ceiling</div>
+              <div style={{ background: "rgba(255,255,255,.95)", color: "#334155", borderRadius: 12, padding: "12px 14px", fontSize: 14 }}>City: Pune, Mumbai, Nashik, Nagpur, Thane</div>
+            </div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              {cityChips.map((city) => (
+                <span key={city} style={{ padding: "6px 10px", borderRadius: 999, background: "rgba(255,255,255,.12)", border: "1px solid rgba(255,255,255,.18)", fontSize: 12, fontWeight: 700 }}>
+                  {city}
+                </span>
+              ))}
+            </div>
+            <div style={{ fontSize: 13, color: "rgba(255,255,255,.82)", lineHeight: 1.6 }}>
+              Public contractor search is the next module. For now, this homepage introduces the marketplace direction while the tools remain available inside MeasureFlow.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style={{ display: "grid", gap: 16 }}>
+        <div>
+          <div style={{ fontSize: 28, fontWeight: 700, color: C.dark, marginBottom: 6, fontFamily: "Georgia, 'Times New Roman', serif" }}>
+            Contractor categories we will support
+          </div>
+          <div style={{ color: "#64748b", fontSize: 15 }}>
+            Build the public marketplace around high-intent AEC and finishing services first, then connect contractor tools behind login.
+          </div>
+        </div>
+        <div className="mf-market-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 16 }}>
+          {serviceCards.map((card) => (
+            <div key={card.title} style={{
+              background: "#fff",
+              borderRadius: 16,
+              border: "1px solid #dbeafe",
+              padding: 18,
+              boxShadow: "0 8px 26px rgba(31,78,121,.08)",
+              display: "grid",
+              gap: 10,
+            }}>
+              <div style={{ width: 44, height: 44, borderRadius: 12, background: `${card.accent}18`, color: card.accent, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 18 }}>
+                {card.title.split(" ")[0].slice(0, 2).toUpperCase()}
+              </div>
+              <div style={{ fontSize: 20, fontWeight: 700, color: "#0f172a", fontFamily: "Georgia, 'Times New Roman', serif" }}>{card.title}</div>
+              <div style={{ color: "#475569", lineHeight: 1.7, fontSize: 14 }}>{card.subtitle}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div style={{
+        background: "#fff",
+        borderRadius: 16,
+        border: "1px solid #dbeafe",
+        boxShadow: "0 8px 26px rgba(31,78,121,.08)",
+        padding: "20px 22px",
+        display: "grid",
+        gap: 16,
+      }}>
+        <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", gap: 14, alignItems: "center" }}>
+          <div>
+            <div style={{ fontSize: 26, fontWeight: 700, color: C.dark, fontFamily: "Georgia, 'Times New Roman', serif" }}>How MeasureFlow will work</div>
+            <div style={{ color: "#64748b", marginTop: 6 }}>Marketplace first for customers, contractor dashboard second for execution and billing tools.</div>
+          </div>
+          <button onClick={onOpenMeasure} style={btn(C.dark)}>Preview Contractor Tools</button>
+        </div>
+        <div className="mf-market-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 14 }}>
+          {[
+            { step: "1", title: "Customers search contractors", text: "Search by service category and city to discover relevant providers." },
+            { step: "2", title: "Contractors register profiles", text: "Contractors join the directory with services, coverage cities, and business details." },
+            { step: "3", title: "MeasureFlow powers execution", text: "Approved contractors use measurements, bills, and rates inside their private dashboard." },
+          ].map((item) => (
+            <div key={item.step} style={{ background: "#f8fbff", borderRadius: 14, border: "1px solid #dbeafe", padding: 16 }}>
+              <div style={{ width: 34, height: 34, borderRadius: 999, background: C.dark, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, marginBottom: 12 }}>
+                {item.step}
+              </div>
+              <div style={{ fontWeight: 700, color: "#0f172a", marginBottom: 8 }}>{item.title}</div>
+              <div style={{ color: "#475569", lineHeight: 1.65, fontSize: 14 }}>{item.text}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function RowEditor({ row, idx, sessId, onUpdate, onRemove, theme }) {
   const T = theme || THEMES.melamine;
   // Local state so inputs are fully controlled and responsive
@@ -2352,6 +2492,13 @@ const PRINT_CSS = `
   .mf-gate-grid {
     grid-template-columns: 1fr !important;
   }
+  .mf-market-hero,
+  .mf-market-grid {
+    grid-template-columns: 1fr 1fr !important;
+  }
+  .mf-market-hero {
+    grid-template-columns: 1fr !important;
+  }
 }
 
 @media (max-width: 600px) {
@@ -2376,6 +2523,10 @@ const PRINT_CSS = `
     display: none !important;
   }
   .mf-two-col-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .mf-market-grid,
+  .mf-market-hero {
     grid-template-columns: 1fr !important;
   }
   .mf-gate-panel {
@@ -5219,9 +5370,15 @@ tr.foot-l td.foot-lbl,tr.foot-l td.foot-val{background:#D6E4F0;color:#1F4E79;fon
         {/* EMPTY STATE */}
         {!loading && !hasSessions && activeTab!=="admin" && (
           <div>
-            <div style={{ textAlign: "center", padding: "36px 20px", color: "#94a3b8" }}>
+            <MarketplaceHomeShell
+              onOpenMeasure={() => openAppTab("measure")}
+              onJoin={() => navigateTo("/contact")}
+              onContact={() => navigateTo("/contact")}
+            />
+            <div style={{ textAlign: "center", padding: "10px 20px 20px", color: "#94a3b8" }}>
               <div style={{ fontSize: 52, marginBottom: 10 }}>📋</div>
-              <div style={{ fontSize: 17, fontWeight: "bold", color: C.dark, marginBottom: 5 }}>MeasureFlow v2.0</div>
+              <div style={{ fontSize: 17, fontWeight: "bold", color: C.dark, marginBottom: 5 }}>MeasureFlow Tools</div>
+              <div style={{ fontSize: 13, marginBottom: 20 }}>Upload images, detect measurements, edit sections, and export bills and reports from one workspace.</div>
               <div style={{ fontSize: 13, marginBottom: 20 }}>Upload images · AI detects Sqft &amp; Rnft · Edit · Export</div>
               <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
                 {["📷 Upload image", "🤖 AI detects Sqft/Rnft", "✏️ Edit inline", "📝 Word .docx", "📊 CSV", "🖨 Print/PDF", "💾 Save & Load"].map((s, i) => (
