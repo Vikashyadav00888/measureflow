@@ -3619,7 +3619,7 @@ function AboutPage({ adClient }) {
   );
 }
 
-function PrivacyPolicyPage() {
+function PrivacyPolicyPage({ adClient }) {
   return (
     <StaticPageShell
       title="Privacy Policy"
@@ -3628,6 +3628,23 @@ function PrivacyPolicyPage() {
       <p>
         MeasureFlow may collect limited technical and usage information to improve app reliability, understand feature usage, and support analytics for the site owner. This may include browser details, device identifiers, page activity, upload and download events, and related technical metadata required to keep the service operational and to improve the product experience.
       </p>
+      <div className="mf-two-col-grid" style={{ display: "grid", gridTemplateColumns: "1.1fr .9fr", gap: 18, margin: "18px 0 20px" }}>
+        <div style={{ display: "grid", gap: 14 }}>
+          <div style={{ background: "#f8fafc", border: "1px solid #dbeafe", borderRadius: 14, padding: 18 }}>
+            <div style={{ fontSize: 18, fontWeight: "bold", color: "#1F4E79", marginBottom: 8 }}>Cookies and advertising</div>
+            <div style={{ color: "#475569", lineHeight: 1.8 }}>
+              MeasureFlow may use cookies for core functionality, analytics, and advertising services such as Google AdSense. Third-party partners may use these technologies to measure ad performance and support appropriate ad delivery.
+            </div>
+          </div>
+          <div style={{ background: "#f8fafc", border: "1px solid #dbeafe", borderRadius: 14, padding: 18 }}>
+            <div style={{ fontSize: 18, fontWeight: "bold", color: "#1F4E79", marginBottom: 8 }}>User rights</div>
+            <div style={{ color: "#475569", lineHeight: 1.8 }}>
+              Users may request access, correction, or deletion of personal data where applicable by law, and may control cookie behavior using browser settings or available consent mechanisms.
+            </div>
+          </div>
+        </div>
+        <StaticPageAdCard adClient={adClient} title="Sponsored" subtitle="Privacy-safe tools for digital businesses" minHeight={280} />
+      </div>
       <p>
         The website may use cookies and similar technologies for essential app functionality, analytics, and advertising. MeasureFlow may display advertising through Google AdSense and other third-party advertising partners. These providers may use cookies, device identifiers, and similar technologies to serve and measure ads, personalize ad delivery where allowed, and understand how users interact with the website. Google may use advertising cookies to serve ads based on prior visits to this site or other websites.
       </p>
@@ -3640,6 +3657,9 @@ function PrivacyPolicyPage() {
       <p>
         Users may have rights under applicable privacy laws, including the right to request access, correction, or deletion of personal data where legally required. Users may also be able to control cookies through browser settings and available consent tools. To make a privacy-related request or enquiry, please contact the site operator using the contact details provided on the Contact page.
       </p>
+      <div style={{ marginTop: 18 }}>
+        <StaticPageAdCard adClient={adClient} title="Sponsored" subtitle="Business services and compliance support" minHeight={190} />
+      </div>
     </StaticPageShell>
   );
 }
@@ -4862,7 +4882,7 @@ tr.foot-l td.foot-lbl,tr.foot-l td.foot-val{background:#D6E4F0;color:#1F4E79;fon
           <>
             {pagePath === "/about" && <AboutPage adClient={adConfig.adClient} />}
             {pagePath === "/contact" && <ContactPage adClient={adConfig.adClient} />}
-            {pagePath === "/privacy-policy" && <PrivacyPolicyPage />}
+            {pagePath === "/privacy-policy" && <PrivacyPolicyPage adClient={adConfig.adClient} />}
           </>
         ) : (
         <>
