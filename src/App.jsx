@@ -1043,7 +1043,7 @@ function AutoAdBanner({ adClient, slot = "auto", side = "right", activeTab, cont
     return () => window.removeEventListener("resize", onResize);
   }, []);
 
-  if (!adClient || mobile || activeTab === "admin") return null;
+  if (!adClient || mobile || activeTab === "admin" || activeTab === "static") return null;
 
   const gutterWidth = Math.max(120, ((viewportWidth - contentWidth) / 2) - 18);
   const railWidth = activeTab === "bill" || activeTab === "rates"
@@ -1127,6 +1127,33 @@ function CenterAdStack({ adClient, label = "Sponsored", minHeight = 150, desktop
       {Array.from({ length: count }).map((_, idx) => (
         <InlineAdStrip key={idx} adClient={adClient} minHeight={minHeight} label={label} />
       ))}
+    </div>
+  );
+}
+
+function StaticPageAdCard({ adClient, title = "Sponsored", subtitle = "Support MeasureFlow", minHeight = 220 }) {
+  if (!adClient) return null;
+  return (
+    <div
+      className="noprint"
+      style={{
+        background: "linear-gradient(180deg, #f8fbff, #eef6ff)",
+        border: "1px solid #d6e4f0",
+        borderRadius: 16,
+        padding: 14,
+        boxShadow: "0 10px 24px rgba(31,78,121,.08)",
+      }}
+    >
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10, gap: 10, flexWrap: "wrap" }}>
+        <div>
+          <div style={{ fontSize: 10, color: "#64748b", letterSpacing: ".08em", textTransform: "uppercase", marginBottom: 4 }}>{title}</div>
+          <div style={{ fontSize: 18, fontWeight: "bold", color: "#1F4E79" }}>{subtitle}</div>
+        </div>
+        <div style={{ fontSize: 12, color: "#64748b", maxWidth: 240, textAlign: "right" }}>
+          Carefully placed sponsor content that helps keep the platform available for public use.
+        </div>
+      </div>
+      <InlineAdStrip adClient={adClient} minHeight={minHeight} label={title} />
     </div>
   );
 }
@@ -3553,7 +3580,7 @@ function StaticPageShell({ title, subtitle, children }) {
   );
 }
 
-function AboutPage() {
+function AboutPage({ adClient }) {
   return (
     <StaticPageShell
       title="About MeasureFlow"
@@ -3562,12 +3589,32 @@ function AboutPage() {
       <p>
         MeasureFlow is a web-based measurement and billing tool built to help contractors, polish teams, painters, and site supervisors manage day-to-day quantity work in a faster and cleaner way. It combines measurement capture, rate management, bill preparation, and export tools into a single workflow so site notes can become organized documents without extra spreadsheet work.
       </p>
+      <div className="mf-two-col-grid" style={{ display: "grid", gridTemplateColumns: "1.1fr .9fr", gap: 18, margin: "18px 0 20px" }}>
+        <div style={{ display: "grid", gap: 14 }}>
+          <div style={{ background: "#f8fafc", border: "1px solid #dbeafe", borderRadius: 14, padding: 18 }}>
+            <div style={{ fontSize: 18, fontWeight: "bold", color: "#1F4E79", marginBottom: 8 }}>Built for real site work</div>
+            <div style={{ color: "#475569", lineHeight: 1.8 }}>
+              MeasureFlow is made for people who work with practical quantity books, mixed measurement types, and real billing deadlines. It keeps those familiar workflows but makes them easier to edit, total, export, and review.
+            </div>
+          </div>
+          <div style={{ background: "#f8fafc", border: "1px solid #dbeafe", borderRadius: 14, padding: 18 }}>
+            <div style={{ fontSize: 18, fontWeight: "bold", color: "#1F4E79", marginBottom: 8 }}>One workflow, fewer tools</div>
+            <div style={{ color: "#475569", lineHeight: 1.8 }}>
+              Instead of moving between measurement books, calculators, spreadsheets, and billing formats, teams can manage measurements, rates, and final reports from a single place.
+            </div>
+          </div>
+        </div>
+        <StaticPageAdCard adClient={adClient} title="Sponsored" subtitle="Tools & services for contractors" minHeight={280} />
+      </div>
       <p>
         The app is designed for practical use on real jobs where teams often work with handwritten measurement notes, mixed measurement types like sqft, rnft, and groove, and changing project rates. MeasureFlow helps convert those measurements into editable sections, summaries, bills, and downloadable files that are easier to review, share, and archive.
       </p>
       <p>
         It is made for small and medium contracting businesses, polish and paint professionals, furniture-finishing teams, and project coordinators who want a more reliable digital workflow without losing the familiar structure of site measurement books. The focus is on simple operation, export-ready outputs, and faster billing from real site data.
       </p>
+      <div style={{ marginTop: 18 }}>
+        <StaticPageAdCard adClient={adClient} title="Sponsored" subtitle="Business support for project teams" minHeight={190} />
+      </div>
     </StaticPageShell>
   );
 }
@@ -3597,7 +3644,7 @@ function PrivacyPolicyPage() {
   );
 }
 
-function ContactPage() {
+function ContactPage({ adClient }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
@@ -3621,13 +3668,22 @@ function ContactPage() {
           <textarea value={message} onChange={(e) => setMessage(e.target.value)} placeholder="Your message" rows={7} style={{ border: "1px solid #cbd5e1", borderRadius: 8, padding: "10px 12px", fontSize: 14, outline: "none", resize: "vertical", fontFamily: "inherit" }} />
           <button type="submit" style={{ ...btn("#1F4E79"), justifyContent: "center" }}>Send Message</button>
         </form>
-        <div style={{ background: "#f8fafc", border: "1px solid #dbeafe", borderRadius: 12, padding: 18 }}>
+        <div style={{ background: "#f8fafc", border: "1px solid #dbeafe", borderRadius: 12, padding: 18, display: "grid", gap: 16 }}>
           <div style={{ fontSize: 18, fontWeight: "bold", color: "#1F4E79", marginBottom: 10 }}>Contact Details</div>
           <div style={{ marginBottom: 12 }}>Email: <a href={`mailto:${SUPPORT_EMAIL}`} style={{ color: "#2E75B6", fontWeight: "bold" }}>{SUPPORT_EMAIL}</a></div>
           <div style={{ fontSize: 13, color: "#64748b" }}>
             Use the contact form to open your mail app with the message details prefilled, or send a direct email using the address above.
           </div>
+          <div style={{ background: "#fff", border: "1px solid #dbeafe", borderRadius: 12, padding: 14 }}>
+            <div style={{ fontSize: 16, fontWeight: "bold", color: "#1F4E79", marginBottom: 8 }}>Best for</div>
+            <div style={{ fontSize: 13, color: "#64748b", lineHeight: 1.8 }}>
+              Product support, billing workflow questions, general enquiries, and feedback on MeasureFlow improvements.
+            </div>
+          </div>
         </div>
+      </div>
+      <div style={{ marginTop: 20 }}>
+        <StaticPageAdCard adClient={adClient} title="Sponsored" subtitle="Relevant tools for site teams" minHeight={210} />
       </div>
     </StaticPageShell>
   );
@@ -4804,8 +4860,8 @@ tr.foot-l td.foot-lbl,tr.foot-l td.foot-val{background:#D6E4F0;color:#1F4E79;fon
 
         {isStaticPage ? (
           <>
-            {pagePath === "/about" && <AboutPage />}
-            {pagePath === "/contact" && <ContactPage />}
+            {pagePath === "/about" && <AboutPage adClient={adConfig.adClient} />}
+            {pagePath === "/contact" && <ContactPage adClient={adConfig.adClient} />}
             {pagePath === "/privacy-policy" && <PrivacyPolicyPage />}
           </>
         ) : (
