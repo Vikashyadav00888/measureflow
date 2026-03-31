@@ -3942,6 +3942,7 @@ export default function App() {
   const importRef = useRef();
   const pendingDownloadRef = useRef(null);
   const isStaticPage = pagePath === "/about" || pagePath === "/contact" || pagePath === "/privacy-policy";
+  const t = (en, hi) => lang === "hi" ? hi : en;
 
   // No auto-load on startup — app always opens fresh/empty
 
@@ -4789,7 +4790,6 @@ tr.foot-l td.foot-lbl,tr.foot-l td.foot-val{background:#D6E4F0;color:#1F4E79;fon
 
   const grand = grandTotal(sessions);
   const hasSessions = sessions.length > 0;
-  const t = (en, hi) => lang === "hi" ? hi : en;
 
   return (
     <div style={{ minHeight: "100vh", background: "#f0f4f8", fontFamily: "Times New Roman, Noto Sans Devanagari, serif", color: "#1a1a2e" }}>
