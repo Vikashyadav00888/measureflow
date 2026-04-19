@@ -1365,7 +1365,12 @@ function SessionPanel({ sess, onUpdate, onRemove }) {
           {unit}
         </span>
         <select
-          value={sess.rows.length > 0 ? (linearRows(sess.rows).length > sess.rows.length/2 ? "rnft" : "sqft") : "sqft"}
+          value={sess.rows.length > 0 ? (() => {
+            const grooveCount = sess.rows.filter(r => r.type === "grove").length;
+            const rnftCount = sess.rows.filter(r => r.type === "rnft").length;
+            if (grooveCount > 0 && grooveCount >= rnftCount && grooveCount >= sess.rows.length / 2) return "grove";
+            return linearRows(sess.rows).length > sess.rows.length/2 ? "rnft" : "sqft";
+          })() : "sqft"}
           onChange={e => {
             const t = e.target.value;
             onUpdate({ ...sess, rows: sess.rows.map(r => ({ ...r, type: t, d2: (t==="rnft"||t==="grove")?null:r.d2, area: calcArea(r.d1, (t==="rnft"||t==="grove")?null:r.d2, r.qty, t) })) });
@@ -1374,6 +1379,7 @@ function SessionPanel({ sess, onUpdate, onRemove }) {
         >
           <option value="sqft" style={{color:"#1a1a2e"}}>Sqft</option>
           <option value="rnft" style={{color:"#1a1a2e"}}>Rnft</option>
+          <option value="grove" style={{color:"#1a1a2e"}}>Grove</option>
         </select>
         {/* Rate input */}
         <div style={{ display:"flex", alignItems:"center", gap:4, background:"rgba(255,255,255,.12)", borderRadius:6, padding:"2px 8px" }}>
@@ -1564,6 +1570,10 @@ function SessionPanel({ sess, onUpdate, onRemove }) {
         <button onClick={() => addRow("rnft")}
           style={{ background: "none", border: "1px dashed "+C.green, borderRadius: 6, color: C.green, cursor: "pointer", padding: "5px 12px", fontSize: 12, fontFamily: "Times New Roman, Noto Sans Devanagari, serif" }}>
           + Rnft row
+        </button>
+        <button onClick={() => addRow("grove")}
+          style={{ background: "none", border: "1px dashed #9333ea", borderRadius: 6, color: "#9333ea", cursor: "pointer", padding: "5px 12px", fontSize: 12, fontFamily: "Times New Roman, Noto Sans Devanagari, serif" }}>
+          + Grove row
         </button>
       </div>
     </div>
