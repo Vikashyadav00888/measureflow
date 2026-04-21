@@ -1216,7 +1216,153 @@ function HomeAdDeck({ adClient, variant = "empty" }) {
   );
 }
 
-function RowEditor({ row, idx, sessId, onUpdate, onRemove, theme }) {
+const RECENT_PROJECTS_KEY = "mf_recent_projects_v1";
+const RECENT_PROJECT_PREFIX = "mf_project_";
+const HISTORY_LIMIT = 60;
+
+const EXPORT_THEMES = {
+  classic: {
+    label: "Classic",
+    dark: "1F4E79",
+    mid: "2E75B6",
+    light: "D6E4F0",
+    accent: "1F4E79",
+  },
+  minimal: {
+    label: "Minimal",
+    dark: "1F2937",
+    mid: "475569",
+    light: "E5E7EB",
+    accent: "0F172A",
+  },
+  professional: {
+    label: "Professional",
+    dark: "7C2D12",
+    mid: "C2410C",
+    light: "FFEDD5",
+    accent: "9A3412",
+  },
+};
+
+function getExportThemeConfig(themeKey) {
+  return EXPORT_THEMES[themeKey] || EXPORT_THEMES.classic;
+}
+
+function getRecentProjects() {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(RECENT_PROJECTS_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function persistRecentProjects(items) {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(RECENT_PROJECTS_KEY, JSON.stringify(items));
+}
+
+function saveRecentProjectSnapshot(meta, raw) {
+  if (typeof window === "undefined" || !meta?.id) return getRecentProjects();
+  localStorage.setItem(`${RECENT_PROJECT_PREFIX}${meta.id}`, raw);
+  const existing = getRecentProjects().filter((item) => item.id !== meta.id);
+  const next = [meta, ...existing].slice(0, 8);
+  persistRecentProjects(next);
+  return next;
+}
+
+function removeRecentProjectSnapshot(id) {
+  if (typeof window === "undefined" || !id) return [];
+  localStorage.removeItem(`${RECENT_PROJECT_PREFIX}${id}`);
+  const next = getRecentProjects().filter((item) => item.id !== id);
+  persistRecentProjects(next);
+  return next;
+}
+
+function loadRecentProjectSnapshot(id) {
+  if (typeof window === "undefined" || !id) return null;
+  try {
+    const raw = localStorage.getItem(`${RECENT_PROJECT_PREFIX}${id}`);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+function cloneRowWithNewId(row) {
+  return { ...row, id: uid() };
+}
+
+function cloneSessionWithNewIds(sess) {
+  return {
+    ...sess,
+    id: uid(),
+    title: `${sess.title || "New Section"} Copy`,
+    rows: (sess.rows || []).map(cloneRowWithNewId),
+  };
+}
+
+function getRowWarnings(row) {
+  const type = row?.type || "sqft";
+  const qty = parseQty(row?.qty);
+  const area = Number(row?.area || 0);
+  const warnings = [];
+  const item = String(row?.item || "").trim();
+  const d1 = String(row?.d1 || "").trim();
+  const d2 = String(row?.d2 || "").trim();
+
+  if (!item) warnings.push("Missing item name");
+  if (!d1) warnings.push("Missing length");
+  if (type === "sqft" && !d2) warnings.push("Sqft row missing width");
+  if ((type === "rnft" || type === "grove") && d2) warnings.push("Linear row should not include width");
+  if (!Number.isFinite(qty) || qty < 1) warnings.push("Quantity should be at least 1");
+  if (qty > 100) warnings.push("Quantity looks unusually high");
+  if (type === "sqft" && d2 && !/['"′″,]/.test(d2)) warnings.push("Width may be quantity, not dimension");
+  if (area <= 0) warnings.push("Area is zero");
+
+  return warnings;
+}
+
+function getSessionWarnings(sess) {
+  return (sess?.rows || []).flatMap((row, idx) =>
+    getRowWarnings(row).map((text) => ({ rowId: row.id, idx, text }))
+  );
+}
+
+function normalizeProjectData(d, rateCardDefault) {
+  return {
+    docTitle: d?.docTitle || "Measurement Report",
+    company: d?.company || "",
+    logoUrl: d?.logoUrl || null,
+    sessions: (d?.sessions || []).map((s) => ({
+      ...s,
+      id: s.id || uid(),
+      rows: (s.rows || []).map((r) => ({
+        ...r,
+        id: r.id || uid(),
+        area: calcArea(r.d1, r.d2, r.qty, r.type),
+      })),
+    })),
+    billClient: d?.billClient || "",
+    billSite: d?.billSite || "",
+    billDate: d?.billDate || new Date().toLocaleDateString("en-IN"),
+    billSub: d?.billSub || "",
+    billAdvance: d?.billAdvance || "",
+    fixedItems: d?.fixedItems || [],
+    manualItems: d?.manualItems || [],
+    billRates: d?.billRates || {},
+    rateCard: d?.rateCard || rateCardDefault,
+    companySpec: d?.companySpec || "",
+    companyAddr: d?.companyAddr || "",
+    companyMob: d?.companyMob || "",
+    totalLabels: d?.totalLabels || { sqftLabel:"Sqft Total", rnftLabel:"Rnft Total", groveLabel:"Grove Total" },
+    exportTheme: d?.exportTheme || "classic",
+  };
+}
+
+function RowEditor({ row, idx, sessId, onUpdate, onRemove, onDuplicate, theme }) {
   const T = theme || THEMES.melamine;
   // Local state so inputs are fully controlled and responsive
   const [item, setItem] = useState(row.item);
@@ -1239,6 +1385,16 @@ function RowEditor({ row, idx, sessId, onUpdate, onRemove, theme }) {
   }, [row, onUpdate]);
 
   const alt = idx % 2 === 1;
+  const liveWarnings = getRowWarnings({
+    ...row,
+    item,
+    d1,
+    d2: type === "sqft" ? d2 : null,
+    qty,
+    type,
+    deduct,
+    area: calcArea(d1, type === "sqft" ? d2 : null, qty, type),
+  });
 
   return (
     <tr style={deduct ? { background: C.redBg } : alt ? { background: T.light } : {}}>
@@ -1248,6 +1404,26 @@ function RowEditor({ row, idx, sessId, onUpdate, onRemove, theme }) {
       <td style={tdStyle(alt, deduct)}>
         <input style={{ ...inp(), minWidth: 130 }} value={item}
           onChange={e => { setItem(e.target.value); commit(e.target.value, d1, d2, qty, type, deduct); }} />
+        {liveWarnings.length > 0 && (
+          <div style={{ marginTop: 4, display: "flex", flexWrap: "wrap", gap: 4 }}>
+            {liveWarnings.slice(0, 2).map((warning, warningIdx) => (
+              <span key={warningIdx} style={{ fontSize: 10, color: "#92400e", background: "#ffedd5", border: "1px solid #fdba74", borderRadius: 999, padding: "1px 6px" }}>
+                {warning}
+              </span>
+            ))}
+            {liveWarnings.length > 2 && (
+              <span style={{ fontSize: 10, color: "#92400e" }}>+{liveWarnings.length - 2} more</span>
+            )}
+          </div>
+        )}
+        <div style={{ marginTop: 4 }}>
+          <button
+            onClick={onDuplicate}
+            style={{ background: "none", border: "none", color: T.mid, cursor: "pointer", fontSize: 11, padding: 0, fontWeight: "bold" }}
+          >
+            Duplicate row
+          </button>
+        </div>
       </td>
 
       {/* Type indicator — screen only, not printed/exported */}
@@ -1325,7 +1501,7 @@ function RowEditor({ row, idx, sessId, onUpdate, onRemove, theme }) {
 }
 
 // ─── SESSION PANEL ────────────────────────────────────────────────────────────
-function SessionPanel({ sess, onUpdate, onRemove }) {
+function SessionPanel({ sess, onUpdate, onRemove, onDuplicate }) {
   const net = netTotal(sess.rows);
   const unit = domUnit(sess);
   const groups = measureGroups(sess);
@@ -1336,6 +1512,7 @@ function SessionPanel({ sess, onUpdate, onRemove }) {
   const sqftTitle = sess.sqftTitle || "Sqft";
   const rnftTitle = sess.rnftTitle || "Rnft";
   const T = detectTheme(sess.title); // theme based on section title
+  const warnings = getSessionWarnings(sess);
 
   const setSqftTitle = (v) => onUpdate({ ...sess, sqftTitle: v });
   const setRnftTitle = (v) => onUpdate({ ...sess, rnftTitle: v });
@@ -1349,6 +1526,15 @@ function SessionPanel({ sess, onUpdate, onRemove }) {
   const addRow = (type) => {
     const newRow = { id: uid(), item: "New item", d1: "1'0\"", d2: type === "sqft" ? "1'0\"" : null, qty: 1, type, deduct: false, area: 1 };
     onUpdate({ ...sess, rows: [...sess.rows, newRow] });
+  };
+
+  const duplicateRow = (rowId) => {
+    const nextRows = [];
+    for (const existingRow of sess.rows) {
+      nextRows.push(existingRow);
+      if (existingRow.id === rowId) nextRows.push(cloneRowWithNewId(existingRow));
+    }
+    onUpdate({ ...sess, rows: nextRows });
   };
 
   return (
@@ -1393,6 +1579,7 @@ function SessionPanel({ sess, onUpdate, onRemove }) {
         </div>
         <span style={{ color: "#93c5fd", fontSize: 12, whiteSpace: "nowrap", display:"flex", gap:10 }}>
           <span>{sess.rows.length} rows</span>
+          {warnings.length > 0 && <span style={{ color: "#fde68a" }}>Warnings: <strong>{warnings.length}</strong></span>}
           {groups.length > 1 ? (<>
             {sft !== 0 && <span>Sft: <strong style={{color:"#bfdbfe"}}>{fmtArea(sft)}</strong></span>}
             {rft !== 0 && <span>Rft: <strong style={{color:"#bbf7d0"}}>{fmtArea(rft)}</strong></span>}
@@ -1439,7 +1626,7 @@ function SessionPanel({ sess, onUpdate, onRemove }) {
                 <th style={{ ...tH, width: 52 }}>Qty</th>
                 <th style={{ ...tH, width: 88, textAlign: "right" }}>Area</th>
                 <th style={{ ...tH, width: 58, textAlign: "center" }}>Deduct</th>
-                <th style={{ ...tH, width: 28 }}></th>
+                <th style={{ ...tH, width: 52 }}></th>
               </tr>
             </thead>
           );
@@ -1452,6 +1639,7 @@ function SessionPanel({ sess, onUpdate, onRemove }) {
                   {sess.rows.map((row, idx) => (
                     <RowEditor key={row.id} row={row} idx={idx} sessId={sess.id} theme={T}
                       onUpdate={(newRow) => updateRow(row.id, newRow)}
+                      onDuplicate={() => duplicateRow(row.id)}
                       onRemove={() => removeRow(row.id)} />
                   ))}
                   {sess.rows.length === 0 && (
@@ -1483,13 +1671,14 @@ function SessionPanel({ sess, onUpdate, onRemove }) {
                   <th style={{ ...tH, width: 52 }}>Qty</th>
                   <th style={{ ...tH, width: 88, textAlign: "right" }}>Area</th>
                   <th style={{ ...tH, width: 58, textAlign: "center" }}>Deduct</th>
-                  <th style={{ ...tH, width: 28 }}></th>
+                  <th style={{ ...tH, width: 52 }}></th>
                 </tr>
               </thead>
               <tbody>
                 {rows.map((row, idx) => (
                   <RowEditor key={row.id} row={row} idx={idx} sessId={sess.id} theme={T}
                     onUpdate={(newRow) => updateRow(row.id, newRow)}
+                    onDuplicate={() => duplicateRow(row.id)}
                     onRemove={() => removeRow(row.id)} />
                 ))}
                 {rows.length === 0 && (
@@ -1575,6 +1764,10 @@ function SessionPanel({ sess, onUpdate, onRemove }) {
           style={{ background: "none", border: "1px dashed #9333ea", borderRadius: 6, color: "#9333ea", cursor: "pointer", padding: "5px 12px", fontSize: 12, fontFamily: "Times New Roman, Noto Sans Devanagari, serif" }}>
           + Grove row
         </button>
+        <button onClick={onDuplicate}
+          style={{ background: "none", border: "1px dashed "+T.dark, borderRadius: 6, color: T.dark, cursor: "pointer", padding: "5px 12px", fontSize: 12, fontFamily: "Times New Roman, Noto Sans Devanagari, serif" }}>
+          Duplicate section
+        </button>
       </div>
     </div>
   );
@@ -1612,6 +1805,7 @@ function buildBillDocxXml(sessions, opts) {
   const manualItems = opts.manualItems || [];
   const billRates   = opts.billRates   || {};
   const rateCard    = opts.rateCard    || [];
+  const exportThemeConfig = getExportThemeConfig(opts.exportTheme);
 
   // Same auto-lookup as BillView — withMat rate from rateCard when no manual rate set
   function autoRate(label, per) {
@@ -1628,7 +1822,10 @@ function buildBillDocxXml(sessions, opts) {
     return match ? parseFloat(match.withMat)||0 : 0;
   }
 
-  const B = "1F4E79", M = "2E75B6", L = "D6E4F0", W = "FFFFFF";
+  const B = exportThemeConfig.dark.replace("#",""),
+        M = exportThemeConfig.mid.replace("#",""),
+        L = exportThemeConfig.light.replace("#",""),
+        W = "FFFFFF";
 
   // ── helpers ────────────────────────────────────────────────────────────────
   function esc(s) {
@@ -2082,8 +2279,9 @@ function docxCell(text, w, { bg="FFFFFF", bold=false, color=null, sz=20, right=f
 }
 function docxRow(...cells) { return `<w:tr>${cells.join("")}</w:tr>`; }
 
-function buildDocxXml(sessions, docTitle, companyName) {
-  const B="1F4E79", M="2E75B6", L="D6E4F0", DR="CC0000", RR="FFE0E0", W="FFFFFF";
+function buildDocxXml(sessions, docTitle, companyName, themeKey = "classic") {
+  const exportThemeConfig = getExportThemeConfig(themeKey);
+  const B=exportThemeConfig.dark.replace("#",""), M=exportThemeConfig.mid.replace("#",""), L=exportThemeConfig.light.replace("#",""), DR="CC0000", RR="FFE0E0", W="FFFFFF";
   let body = "";
 
   if (companyName) {
@@ -2277,7 +2475,7 @@ const SETTINGS = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
   <w:defaultTabStop w:val="720"/>
 </w:settings>`;
 
-async function buildDocx(sessions, docTitle, companyName, logoUrl, customXml) {
+async function buildDocx(sessions, docTitle, companyName, logoUrl, customXml, themeKey = "classic") {
   // Load JSZip from CDN (much more reliable in sandboxes than docx lib)
   if (!window.JSZip) {
     await new Promise((res, rej) => {
@@ -2301,7 +2499,7 @@ async function buildDocx(sessions, docTitle, companyName, logoUrl, customXml) {
   const zip = new window.JSZip();
   zip.file("[Content_Types].xml", CONTENT_TYPES);
   zip.file("_rels/.rels", RELS);
-  zip.file("word/document.xml", customXml || buildDocxXml(sessions, docTitle, companyName));
+  zip.file("word/document.xml", customXml || buildDocxXml(sessions, docTitle, companyName, themeKey));
   zip.file("word/_rels/document.xml.rels", DOC_RELS);
   zip.file("word/styles.xml", STYLES);
   zip.file("word/settings.xml", SETTINGS);
@@ -3935,6 +4133,9 @@ export default function App() {
   const [printing, setPrinting] = useState(false);
   const [activeTab, setActiveTab] = useState('measure'); // 'measure' | 'bill' | 'rates'
   const [lang, setLang] = useState("en");
+  const [exportTheme, setExportTheme] = useState("classic");
+  const [recentProjects, setRecentProjects] = useState(() => getRecentProjects());
+  const [historyState, setHistoryState] = useState({ undo: 0, redo: 0 });
   const [analyticsEnabled, setAnalyticsEnabled] = useState(false);
   const [pagePath, setPagePath] = useState(() => typeof window !== "undefined" ? window.location.pathname : "/");
   const [adminMode, setAdminMode] = useState(() => typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("admin") === "1" : false);
@@ -3951,8 +4152,31 @@ export default function App() {
   const logoRef = useRef();
   const importRef = useRef();
   const pendingDownloadRef = useRef(null);
+  const historyApplyingRef = useRef(false);
+  const undoStackRef = useRef([]);
+  const redoStackRef = useRef([]);
+  const lastSnapshotRef = useRef("");
   const isStaticPage = pagePath === "/about" || pagePath === "/contact" || pagePath === "/privacy-policy";
   const t = (en, hi) => lang === "hi" ? hi : en;
+  const projectSnapshot = JSON.stringify({
+    docTitle,
+    company,
+    sessions,
+    billClient,
+    billSite,
+    billDate,
+    billSub,
+    billAdvance,
+    fixedItems,
+    manualItems,
+    billRates,
+    rateCard,
+    companySpec,
+    companyAddr,
+    companyMob,
+    totalLabels,
+    exportTheme,
+  });
 
   // No auto-load on startup — app always opens fresh/empty
 
@@ -3960,6 +4184,63 @@ export default function App() {
   function flash(text, ok = true) {
     setExportMsg({ text, ok });
     setTimeout(() => setExportMsg(null), 3500);
+  }
+
+  function syncHistoryState() {
+    setHistoryState({ undo: undoStackRef.current.length, redo: redoStackRef.current.length });
+  }
+
+  function buildProjectData() {
+    return {
+      docTitle,
+      company,
+      logoUrl,
+      sessions,
+      billClient,
+      billSite,
+      billDate,
+      billSub,
+      billAdvance,
+      fixedItems,
+      manualItems,
+      billRates,
+      rateCard,
+      companySpec,
+      companyAddr,
+      companyMob,
+      totalLabels,
+      exportTheme,
+      at: new Date().toISOString(),
+    };
+  }
+
+  function applyProjectData(data, options = {}) {
+    const normalized = normalizeProjectData(data, RATE_CARD_DEFAULT);
+    if (options.resetHistory) {
+      undoStackRef.current = [];
+      redoStackRef.current = [];
+      lastSnapshotRef.current = "";
+      syncHistoryState();
+    }
+    if (options.historyRestore) historyApplyingRef.current = true;
+    setDocTitle(normalized.docTitle);
+    setCompany(normalized.company);
+    setLogoUrl(normalized.logoUrl);
+    setSessions(normalized.sessions);
+    setBillClient(normalized.billClient);
+    setBillSite(normalized.billSite);
+    setBillDate(normalized.billDate);
+    setBillSub(normalized.billSub);
+    setBillAdvance(normalized.billAdvance);
+    setFixedItems(normalized.fixedItems);
+    setManualItems(normalized.manualItems);
+    setBillRates(normalized.billRates);
+    setRateCard(normalized.rateCard);
+    setCompanySpec(normalized.companySpec);
+    setCompanyAddr(normalized.companyAddr);
+    setCompanyMob(normalized.companyMob);
+    setTotalLabels(normalized.totalLabels);
+    setExportTheme(normalized.exportTheme);
   }
 
   useEffect(() => {
@@ -4005,6 +4286,27 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    if (!lastSnapshotRef.current) {
+      lastSnapshotRef.current = projectSnapshot;
+      syncHistoryState();
+      return;
+    }
+    if (historyApplyingRef.current) {
+      historyApplyingRef.current = false;
+      lastSnapshotRef.current = projectSnapshot;
+      syncHistoryState();
+      return;
+    }
+    if (projectSnapshot !== lastSnapshotRef.current) {
+      undoStackRef.current.push(lastSnapshotRef.current);
+      if (undoStackRef.current.length > HISTORY_LIMIT) undoStackRef.current.shift();
+      redoStackRef.current = [];
+      lastSnapshotRef.current = projectSnapshot;
+      syncHistoryState();
+    }
+  }, [projectSnapshot]);
+
+  useEffect(() => {
     const meta = getMetaContent(pagePath);
     document.title = meta.title;
 
@@ -4041,6 +4343,26 @@ export default function App() {
       setPagePath("/");
     }
     setActiveTab(tabId);
+  }
+
+  function undoProjectChange() {
+    if (!undoStackRef.current.length) return;
+    const current = projectSnapshot;
+    const previous = undoStackRef.current.pop();
+    redoStackRef.current.push(current);
+    applyProjectData(JSON.parse(previous), { historyRestore: true });
+    lastSnapshotRef.current = previous;
+    syncHistoryState();
+  }
+
+  function redoProjectChange() {
+    if (!redoStackRef.current.length) return;
+    const current = projectSnapshot;
+    const next = redoStackRef.current.pop();
+    undoStackRef.current.push(current);
+    applyProjectData(JSON.parse(next), { historyRestore: true });
+    lastSnapshotRef.current = next;
+    syncHistoryState();
   }
 
   const headerNavItems = [
@@ -4387,11 +4709,20 @@ export default function App() {
 
   // Save
   async function saveSession() {
-    const data = { docTitle, company, sessions, billClient, billSite, billDate, billSub, billAdvance, fixedItems, manualItems, billRates, rateCard, companySpec, companyAddr, companyMob, totalLabels, at: new Date().toISOString() };
+    const data = buildProjectData();
     const raw = JSON.stringify(data);
     try {
       if (window.storage?.set) await window.storage.set("mf3", raw);
       localStorage.setItem("mf3", raw);
+      setRecentProjects(saveRecentProjectSnapshot({
+        id: `p_${Date.now()}`,
+        title: data.docTitle || "Untitled Project",
+        company: data.company || "",
+        savedAt: data.at,
+        sessionCount: data.sessions.length,
+        grandTotal: grandTotal(data.sessions),
+        exportTheme: data.exportTheme,
+      }, raw));
       setSaveLabel("✅ Saved!");
       setTimeout(() => setSaveLabel("💾 Save"), 2500);
     } catch (e) {
@@ -4439,7 +4770,7 @@ export default function App() {
 
   // JSON save/load
   function exportJSON() {
-    const data = { docTitle, company, sessions, at: new Date().toISOString() };
+    const data = buildProjectData();
     download(new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }), docTitle.replace(/\s+/g, "_") + ".json");
     flash("✅ Session saved as JSON!");
   }
@@ -4451,35 +4782,27 @@ export default function App() {
     reader.onload = ev => {
       try {
         const d = JSON.parse(ev.target.result);
-        if (d.docTitle) setDocTitle(d.docTitle);
-        if (d.company) setCompany(d.company);
-        if (d.billClient)   setBillClient(d.billClient);
-        if (d.billSite)     setBillSite(d.billSite);
-        if (d.billDate)     setBillDate(d.billDate);
-        if (d.billSub)      setBillSub(d.billSub);
-        if (d.billAdvance)  setBillAdvance(d.billAdvance);
-        if (d.fixedItems)   setFixedItems(d.fixedItems);
-        if (d.manualItems)  setManualItems(d.manualItems);
-        if (d.billRates)    setBillRates(d.billRates || {});
-    if (d.totalLabels)  setTotalLabels(d.totalLabels);
-        if (d.rateCard)     setRateCard(d.rateCard);
-        if (d.companySpec)  setCompanySpec(d.companySpec);
-        if (d.companyAddr)  setCompanyAddr(d.companyAddr);
-        if (d.companyMob)   setCompanyMob(d.companyMob);
-        if (d.sessions?.length) {
-          setSessions(d.sessions.map(s => ({
-            ...s, id: s.id || uid(),
-            rows: (s.rows || []).map(r => ({
-              ...r, id: r.id || uid(),
-              area: calcArea(r.d1, r.d2, r.qty, r.type),
-            })),
-          })));
-          flash("✅ Session loaded!");
-        }
+        applyProjectData(d, { historyRestore: true, resetHistory: true });
+        flash("✅ Session loaded!");
       } catch (err) { setError("Invalid file: " + err.message); }
     };
     reader.readAsText(f);
     e.target.value = "";
+  }
+
+  function loadRecentProject(id) {
+    const data = loadRecentProjectSnapshot(id);
+    if (!data) {
+      setRecentProjects(removeRecentProjectSnapshot(id));
+      flash("Recent project data was missing.", false);
+      return;
+    }
+    applyProjectData(data, { historyRestore: true, resetHistory: true });
+    flash("? Recent project loaded!");
+  }
+
+  function removeRecentProject(id) {
+    setRecentProjects(removeRecentProjectSnapshot(id));
   }
 
   // DOCX export
@@ -4487,7 +4810,7 @@ export default function App() {
     setDocxBusy(true);
     flash("⏳ Building Word document…", true);
     try {
-      const blob = await buildDocx(sessions, docTitle, company, logoUrl);
+      const blob = await buildDocx(sessions, docTitle, company, logoUrl, null, exportTheme);
       download(blob, docTitle.replace(/\s+/g, "_") + ".docx");
       flash("✅ Word (.docx) downloaded!");
     } catch (e) {
@@ -4499,7 +4822,11 @@ export default function App() {
 
   // ── Measurement PDF (print-to-PDF via new window) ─────────────────────────
   function handleMeasurePdf() {
-    // Format dimension string exactly like target: "6'0" x 27" for rnft, "6'0" x 2'3" x 2" for sqft
+    const exportThemeConfig = getExportThemeConfig(exportTheme);
+    const pdfDark = exportThemeConfig.dark;
+    const pdfMid = exportThemeConfig.mid;
+    const pdfLight = exportThemeConfig.light;
+    // Format dimension string exactly like target: "6'0\" x 27\" for rnft, "6'0\" x 2'3\" x 2\" for sqft
     function fmtDimPdf(dim1, dim2, qty, isRnft) {
       const q = qty || 1;
       if (isRnft) {
@@ -4576,22 +4903,22 @@ export default function App() {
   .section { margin-bottom:32px; page-break-inside:avoid; }
   .section-title {
     font-size:13px; font-weight:bold; text-align:center;
-    border-top:2px solid #111; border-bottom:1px solid #111;
+    border-top:2px solid ${pdfDark}; border-bottom:1px solid ${pdfMid};
     padding:4px 0; margin-bottom:0; letter-spacing:.5px;
   }
   table { width:100%; border-collapse:collapse; font-size:12.5px; }
-  thead tr { border-bottom:1px solid #111; }
-  th { font-weight:bold; padding:5px 8px; text-align:left; font-size:12.5px; border-bottom:1px solid #333; }
+  thead tr { border-bottom:1px solid ${pdfMid}; }
+  th { font-weight:bold; padding:5px 8px; text-align:left; font-size:12.5px; border-bottom:1px solid ${pdfMid}; color:${pdfDark}; }
   td { padding:4px 8px; border-bottom:1px solid #ddd; vertical-align:top; }
   th.sr, td.sr { width:42px; text-align:right; }
   th.dim, td.dim { width:160px; text-align:right; }
   th.area, td.area { width:110px; text-align:right; }
   th.item, td.item { }
-  .total-row td { border-top:1.5px solid #111; border-bottom:2px solid #111; font-weight:bold; padding:5px 8px; }
+  .total-row td { border-top:1.5px solid ${pdfMid}; border-bottom:2px solid ${pdfDark}; font-weight:bold; padding:5px 8px; }
   .total-label { text-align:right; font-weight:bold; }
   .total-val { font-weight:bold; }
   .grand-box { margin-top:16px; border-top:2px solid #111; padding-top:8px; font-weight:bold; font-size:13px; display:flex; justify-content:flex-end; gap:20px; flex-wrap:wrap; }
-  .gt-item { color:#1F4E79; }
+  .gt-item { color:${pdfDark}; }
   .gt-item.grove { color:#7c3aed; }
   @media print {
     body { font-size:12px; }
@@ -4630,9 +4957,9 @@ export default function App() {
     try {
       const xml = buildBillDocxXml(sessions, {
         company, companySpec, companyAddr, companyMob, logoUrl,
-        billClient, billSite, billDate, billSub, billAdvance, fixedItems, manualItems, billRates, rateCard
+        billClient, billSite, billDate, billSub, billAdvance, fixedItems, manualItems, billRates, rateCard, exportTheme
       });
-      const blob = await buildDocx(sessions, docTitle, company, logoUrl, xml);
+      const blob = await buildDocx(sessions, docTitle, company, logoUrl, xml, exportTheme);
       const fname = (billClient || "Bill").replace(/\s+/g,"_") + "_" + billDate.replace(/\//g,"-") + ".docx";
       download(blob, fname);
       flash("✅ Bill downloaded!");
@@ -4645,6 +4972,10 @@ export default function App() {
 
   // ── Bill PDF ──────────────────────────────────────────────────────────────
   function handleBillPdf() {
+    const exportThemeConfig = getExportThemeConfig(exportTheme);
+    const billDark = exportThemeConfig.dark;
+    const billMid = exportThemeConfig.mid;
+    const billLight = exportThemeConfig.light;
     // Build all bill lines same as BillView
     const lines = [];
     const bRates = billRates || {};
@@ -4692,7 +5023,7 @@ export default function App() {
         <td class="r">${xmlEscHtml(String(qty))}</td>
         <td class="r">${xmlEscHtml(String(rate))}</td>
         <td class="l">${xmlEscHtml(l.per||"")}</td>
-        <td class="r" style="font-weight:bold;color:#1F4E79">${tot}</td>
+        <td class="r" style="font-weight:bold;color:${billDark}">${tot}</td>
       </tr>`;
     }).join("");
 
@@ -4701,33 +5032,33 @@ export default function App() {
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:"Times New Roman",serif;font-size:13px;color:#1a1a2e;padding:22px 28px;max-width:800px;margin:0 auto}
-.hdr{background:#1F4E79;color:#fff;border:3px solid #2E75B6;padding:14px 20px;text-align:center;border-radius:4px}
+.hdr{background:${billDark};color:#fff;border:3px solid ${billMid};padding:14px 20px;text-align:center;border-radius:4px}
 .hdr-name{font-size:20px;font-weight:bold;text-decoration:underline;letter-spacing:1px;margin-bottom:6px}
 .hdr-spec{font-size:12px;color:#BDD7EE}
 .sep{border:none;border-top:1.5px solid #c7d9f0;margin:10px 0 6px}
 .addr-row{display:flex;justify-content:space-between;align-items:flex-start;margin-top:4px}
-.addr-left{font-size:12px;color:#1F4E79;line-height:1.7}
-.date{font-size:12px;color:#1F4E79;text-decoration:underline;font-weight:bold;text-align:right}
-.meta{margin:12px 0 10px;border-left:3px solid #2E75B6;padding-left:10px}
-.meta p{font-size:13px;color:#1F4E79;margin:4px 0}
+.addr-left{font-size:12px;color:${billDark};line-height:1.7}
+.date{font-size:12px;color:${billDark};text-decoration:underline;font-weight:bold;text-align:right}
+.meta{margin:12px 0 10px;border-left:3px solid ${billMid};padding-left:10px}
+.meta p{font-size:13px;color:${billDark};margin:4px 0}
 .meta .lbl{font-weight:bold}
 .meta .ulbl{font-weight:bold;text-decoration:underline}
-.bill-heading{text-align:center;font-size:16px;font-weight:bold;text-decoration:underline;color:#1F4E79;margin:14px 0 12px;letter-spacing:2px}
+.bill-heading{text-align:center;font-size:16px;font-weight:bold;text-decoration:underline;color:${billDark};margin:14px 0 12px;letter-spacing:2px}
 table{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:0}
-thead th{background:#1F4E79;color:#fff;font-weight:bold;padding:8px 10px;border:1px solid #2E75B6;white-space:nowrap}
+thead th{background:${billDark};color:#fff;font-weight:bold;padding:8px 10px;border:1px solid ${billMid};white-space:nowrap}
 th.r,td.r{text-align:right}
 th.l,td.l{text-align:left}
 th.c,td.c{text-align:center}
 td{padding:7px 10px;border:1px solid #c7d9f0;vertical-align:middle}
 tr.even td{background:#fff}
-tr.odd  td{background:#D6E4F0}
+tr.odd  td{background:${billLight}}
 .foot-blank{background:#f8fafc !important;border-color:#e2e8f0 !important}
 tr.foot-b .foot-blank{background:#f8fafc !important;border:1px solid #e2e8f0 !important;color:#f8fafc}
-tr.foot-b td.foot-lbl,tr.foot-b td.foot-val{background:#1F4E79;color:#fff;font-weight:bold;font-size:14px;border:1px solid #2E75B6}
-tr.foot-l td.foot-lbl,tr.foot-l td.foot-val{background:#D6E4F0;color:#1F4E79;font-weight:bold;border:1px solid #c7d9f0}
-.words{margin:18px 0 22px;font-size:13px;color:#1F4E79;padding:10px 14px;background:#f0f7ff;border-left:3px solid #2E75B6;border-radius:2px}
+tr.foot-b td.foot-lbl,tr.foot-b td.foot-val{background:${billDark};color:#fff;font-weight:bold;font-size:14px;border:1px solid ${billMid}}
+tr.foot-l td.foot-lbl,tr.foot-l td.foot-val{background:${billLight};color:${billDark};font-weight:bold;border:1px solid #c7d9f0}
+.words{margin:18px 0 22px;font-size:13px;color:${billDark};padding:10px 14px;background:#f0f7ff;border-left:3px solid ${billMid};border-radius:2px}
 .words .lbl{font-weight:bold;text-decoration:underline}
-.sign-row{display:flex;justify-content:space-between;margin-top:40px;font-size:13px;color:#1F4E79}
+.sign-row{display:flex;justify-content:space-between;margin-top:40px;font-size:13px;color:${billDark}}
 @media print{body{padding:10px 14px;max-width:none}@page{size:A4;margin:12mm 14mm}}
 </style>
 <script>window.onload = function(){ setTimeout(function(){ window.print(); }, 300); }</script>
@@ -4978,6 +5309,8 @@ tr.foot-l td.foot-lbl,tr.foot-l td.foot-val{background:#D6E4F0;color:#1F4E79;fon
             ))}
           </div>}
           {!isStaticPage && activeTab==="measure" && hasSessions && <>
+            <button style={btn("#475569", true)} onClick={undoProjectChange} disabled={!historyState.undo}>↶ Undo</button>
+            <button style={btn("#64748b", true)} onClick={redoProjectChange} disabled={!historyState.redo}>↷ Redo</button>
             <button style={btn(C.mid, true)} onClick={saveSession}>{saveLabel}</button>
           </>}
           {!isStaticPage && activeTab==="bill" && <>
@@ -5025,6 +5358,14 @@ tr.foot-l td.foot-lbl,tr.foot-l td.foot-val{background:#D6E4F0;color:#1F4E79;fon
               <div style={{ fontSize:11, color:"#64748b", marginBottom:3 }}>{t("Company Name","कंपनी का नाम")}</div>
               <input style={inp()} value={company} placeholder={t("Your company name","अपनी कंपनी का नाम")} onChange={e => setCompany(e.target.value)} />
             </div>
+            <div style={{ flex:"1 1 180px" }}>
+              <div style={{ fontSize:11, color:"#64748b", marginBottom:3 }}>Export Theme</div>
+              <select style={{ ...inp(), width: "100%" }} value={exportTheme} onChange={e => setExportTheme(e.target.value)}>
+                {Object.entries(EXPORT_THEMES).map(([key, cfg]) => (
+                  <option key={key} value={key}>{cfg.label}</option>
+                ))}
+              </select>
+            </div>
             <div>
               <div style={{ fontSize:11, color:"#64748b", marginBottom:3 }}>{t("Logo","लोगो")}</div>
               <div style={{ display:"flex", gap:8, alignItems:"center" }}>
@@ -5039,6 +5380,28 @@ tr.foot-l td.foot-lbl,tr.foot-l td.foot-val{background:#D6E4F0;color:#1F4E79;fon
               <button style={btn("#0891b2")} onClick={() => importRef.current.click()}>📂 Load Session</button>
             </div>
           </div>
+          {recentProjects.length > 0 && (
+            <div style={{ padding: "0 14px 14px" }}>
+              <div style={{ fontSize: 12, color: "#64748b", fontWeight: "bold", marginBottom: 8 }}>Recent Projects</div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 10 }}>
+                {recentProjects.map((project) => (
+                  <div key={project.id} style={{ background: "#f8fafc", border: "1px solid #dbeafe", borderRadius: 10, padding: 12 }}>
+                    <div style={{ fontWeight: "bold", color: C.dark, marginBottom: 4 }}>{project.title}</div>
+                    <div style={{ fontSize: 11, color: "#64748b", marginBottom: 8 }}>
+                      {project.company || "No company"} � {project.sessionCount || 0} sections
+                    </div>
+                    <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 10 }}>
+                      {project.savedAt ? new Date(project.savedAt).toLocaleString("en-IN") : ""}
+                    </div>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <button style={btn(C.mid, true)} onClick={() => loadRecentProject(project.id)}>Load</button>
+                      <button style={btn("#64748b", true)} onClick={() => removeRecentProject(project.id)}>Remove</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* UPLOAD */}
@@ -5116,6 +5479,14 @@ tr.foot-l td.foot-lbl,tr.foot-l td.foot-val{background:#D6E4F0;color:#1F4E79;fon
                 sess={sess}
                 onUpdate={updated => updateSession(sess.id, updated)}
                 onRemove={() => removeSession(sess.id)}
+                onDuplicate={() => setSessions(prev => {
+                  const next = [];
+                  for (const existing of prev) {
+                    next.push(existing);
+                    if (existing.id === sess.id) next.push(cloneSessionWithNewIds(existing));
+                  }
+                  return next;
+                })}
               />
             ))}
 
@@ -5253,3 +5624,16 @@ tr.foot-l td.foot-lbl,tr.foot-l td.foot-val{background:#D6E4F0;color:#1F4E79;fon
     </div>
   );
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
