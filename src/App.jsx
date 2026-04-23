@@ -279,7 +279,7 @@ Before extracting ANYTHING:
 1. Count every line that has a dimension (has × or x in it)
 2. Write that number down mentally
 3. Your JSON must have EXACTLY that many data rows (excluding title rows)
-4. If your count ≠ your rows, you missed a line — find it before returning
+4. If your count �  your rows, you missed a line — find it before returning
 
 NEVER skip a line. Missing one line shifts ALL following item names wrong.
 A blank item name "" or a ditto mark " is still a full data row.
@@ -602,7 +602,7 @@ with inches-only dims, large dims, qty addition, struck-through rows, multiple s
     above win wall 15'4" × 2     rnft   ← 15 feet 4 inches
     bed edge       12'8" × 1     rnft   ← 12 feet 8 inches
     Mall ceiling   13'5" × 24    rnft   (qty=16+8)
-  DO NOT truncate: 15'7" ≠ 5'7", 23'8" ≠ 3'8", 17'3" ≠ 7'3"
+  DO NOT truncate: 15'7" �  5'7", 23'8" �  3'8", 17'3" �  7'3"
 
 ★ CRITICAL PATTERN 4 — QTY ADDITION FORMAT:
   qty written as sum: 2+7=9, 16+8=24, 41+4=45, 24+28=52, 2+1+2=5
@@ -1248,6 +1248,30 @@ function getExportThemeConfig(themeKey) {
   return EXPORT_THEMES[themeKey] || EXPORT_THEMES.classic;
 }
 
+function toHexColor(value) {
+  const text = String(value || "");
+  return text.startsWith("#") ? text : `#${text}`;
+}
+
+function getMeasurementExportPalette(themeKey) {
+  const cfg = getExportThemeConfig(themeKey);
+  const dark = toHexColor(cfg.dark);
+  const mid = toHexColor(cfg.mid);
+  const light = toHexColor(cfg.light);
+  const accent = toHexColor(cfg.accent || cfg.mid);
+  return {
+    dark,
+    darkRaw: dark.replace("#", ""),
+    mid,
+    midRaw: mid.replace("#", ""),
+    light,
+    lightRaw: light.replace("#", ""),
+    sqft: { dark, darkRaw: dark.replace("#", ""), val: light, valRaw: light.replace("#", "") },
+    rnft: { dark: mid, darkRaw: mid.replace("#", ""), val: light, valRaw: light.replace("#", "") },
+    grove: { dark: accent, darkRaw: accent.replace("#", ""), val: light, valRaw: light.replace("#", "") },
+  };
+}
+
 function getRecentProjects() {
   if (typeof window === "undefined") return [];
   try {
@@ -1362,7 +1386,7 @@ function normalizeProjectData(d, rateCardDefault) {
   };
 }
 
-function RowEditor({ row, idx, sessId, onUpdate, onRemove, onDuplicate, theme }) {
+function RowEditor({ row, idx, sessId, onUpdate, onRemove, onDuplicate, onInsertAbove, onInsertBelow, theme }) {
   const T = theme || THEMES.melamine;
   // Local state so inputs are fully controlled and responsive
   const [item, setItem] = useState(row.item);
@@ -1416,13 +1440,10 @@ function RowEditor({ row, idx, sessId, onUpdate, onRemove, onDuplicate, theme })
             )}
           </div>
         )}
-        <div style={{ marginTop: 4 }}>
-          <button
-            onClick={onDuplicate}
-            style={{ background: "none", border: "none", color: T.mid, cursor: "pointer", fontSize: 11, padding: 0, fontWeight: "bold" }}
-          >
-            Duplicate row
-          </button>
+        <div style={{ marginTop: 4, display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <button onClick={onInsertAbove} style={{ background: "none", border: "none", color: "#475569", cursor: "pointer", fontSize: 11, padding: 0, fontWeight: "bold" }}>+ Above</button>
+          <button onClick={onInsertBelow} style={{ background: "none", border: "none", color: "#475569", cursor: "pointer", fontSize: 11, padding: 0, fontWeight: "bold" }}>+ Below</button>
+          <button onClick={onDuplicate} style={{ background: "none", border: "none", color: T.mid, cursor: "pointer", fontSize: 11, padding: 0, fontWeight: "bold" }}>Duplicate row</button>
         </div>
       </td>
 
@@ -1501,7 +1522,7 @@ function RowEditor({ row, idx, sessId, onUpdate, onRemove, onDuplicate, theme })
 }
 
 // ─── SESSION PANEL ────────────────────────────────────────────────────────────
-function SessionPanel({ sess, onUpdate, onRemove, onDuplicate }) {
+function SessionPanel({ sess, onUpdate, onRemove, onDuplicate, onMergeUp, onMergeDown }) {
   const net = netTotal(sess.rows);
   const unit = domUnit(sess);
   const groups = measureGroups(sess);
@@ -1533,6 +1554,28 @@ function SessionPanel({ sess, onUpdate, onRemove, onDuplicate }) {
     for (const existingRow of sess.rows) {
       nextRows.push(existingRow);
       if (existingRow.id === rowId) nextRows.push(cloneRowWithNewId(existingRow));
+    }
+    onUpdate({ ...sess, rows: nextRows });
+  };
+
+  const insertRowRelative = (rowId, position) => {
+    const nextRows = [];
+    for (const existingRow of sess.rows) {
+      if (existingRow.id === rowId && position === "above") {
+        const inserted = cloneRowWithNewId(existingRow);
+        inserted.item = "";
+        inserted.deduct = false;
+        inserted.area = calcArea(inserted.d1, inserted.d2, inserted.qty, inserted.type);
+        nextRows.push(inserted);
+      }
+      nextRows.push(existingRow);
+      if (existingRow.id === rowId && position === "below") {
+        const inserted = cloneRowWithNewId(existingRow);
+        inserted.item = "";
+        inserted.deduct = false;
+        inserted.area = calcArea(inserted.d1, inserted.d2, inserted.qty, inserted.type);
+        nextRows.push(inserted);
+      }
     }
     onUpdate({ ...sess, rows: nextRows });
   };
@@ -1639,6 +1682,8 @@ function SessionPanel({ sess, onUpdate, onRemove, onDuplicate }) {
                   {sess.rows.map((row, idx) => (
                     <RowEditor key={row.id} row={row} idx={idx} sessId={sess.id} theme={T}
                       onUpdate={(newRow) => updateRow(row.id, newRow)}
+                      onInsertAbove={() => insertRowRelative(row.id, "above")}
+                      onInsertBelow={() => insertRowRelative(row.id, "below")}
                       onDuplicate={() => duplicateRow(row.id)}
                       onRemove={() => removeRow(row.id)} />
                   ))}
@@ -1678,6 +1723,8 @@ function SessionPanel({ sess, onUpdate, onRemove, onDuplicate }) {
                 {rows.map((row, idx) => (
                   <RowEditor key={row.id} row={row} idx={idx} sessId={sess.id} theme={T}
                     onUpdate={(newRow) => updateRow(row.id, newRow)}
+                    onInsertAbove={() => insertRowRelative(row.id, "above")}
+                    onInsertBelow={() => insertRowRelative(row.id, "below")}
                     onDuplicate={() => duplicateRow(row.id)}
                     onRemove={() => removeRow(row.id)} />
                 ))}
@@ -1768,6 +1815,18 @@ function SessionPanel({ sess, onUpdate, onRemove, onDuplicate }) {
           style={{ background: "none", border: "1px dashed "+T.dark, borderRadius: 6, color: T.dark, cursor: "pointer", padding: "5px 12px", fontSize: 12, fontFamily: "Times New Roman, Noto Sans Devanagari, serif" }}>
           Duplicate section
         </button>
+        {onMergeUp && (
+          <button onClick={onMergeUp}
+            style={{ background: "none", border: "1px dashed #475569", borderRadius: 6, color: "#475569", cursor: "pointer", padding: "5px 12px", fontSize: 12, fontFamily: "Times New Roman, Noto Sans Devanagari, serif" }}>
+            Merge with above
+          </button>
+        )}
+        {onMergeDown && (
+          <button onClick={onMergeDown}
+            style={{ background: "none", border: "1px dashed #475569", borderRadius: 6, color: "#475569", cursor: "pointer", padding: "5px 12px", fontSize: 12, fontFamily: "Times New Roman, Noto Sans Devanagari, serif" }}>
+            Merge with below
+          </button>
+        )}
       </div>
     </div>
   );
@@ -2253,13 +2312,14 @@ function buildRateCardDocxXml(rateCard, companyName, companySpec, companyMob) {
 // \u2500\u2500\u2500 DOCX EXPORT (pure XML + JSZip \u2014 no blocked CDN) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 
 // ─── DOCX XML HELPERS (used by buildDocxXml) ─────────────────────────────────
-function docxRun(text, { bold=false, color=null, sz=20, italic=false }={}) {
+function docxRun(text, { bold=false, color=null, sz=20, italic=false, hidden=false }={}) {
   const esc = (s) => String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
   const b  = bold   ? "<w:b/><w:bCs/>" : "";
   const it = italic ? "<w:i/>" : "";
   const c  = color  ? `<w:color w:val="${color}"/>` : "";
   const s  = `<w:sz w:val="${sz}"/><w:szCs w:val="${sz}"/>`;
-  return `<w:r><w:rPr>${b}${it}${c}${s}</w:rPr><w:t xml:space="preserve">${esc(text)}</w:t></w:r>`;
+  const h  = hidden ? "<w:vanish/>" : "";
+  return `<w:r><w:rPr>${b}${it}${c}${s}${h}</w:rPr><w:t xml:space="preserve">${esc(text)}</w:t></w:r>`;
 }
 function docxPara(runs, { center=false, spBefore=0, spAfter=80, bg=null }={}) {
   const jc  = center ? `<w:jc w:val="center"/>` : "";
@@ -2280,8 +2340,8 @@ function docxCell(text, w, { bg="FFFFFF", bold=false, color=null, sz=20, right=f
 function docxRow(...cells) { return `<w:tr>${cells.join("")}</w:tr>`; }
 
 function buildDocxXml(sessions, docTitle, companyName, themeKey = "classic") {
-  const exportThemeConfig = getExportThemeConfig(themeKey);
-  const B=exportThemeConfig.dark.replace("#",""), M=exportThemeConfig.mid.replace("#",""), L=exportThemeConfig.light.replace("#",""), DR="CC0000", RR="FFE0E0", W="FFFFFF";
+  const exportPalette = getMeasurementExportPalette(themeKey);
+  const B=exportPalette.darkRaw, M=exportPalette.midRaw, L=exportPalette.lightRaw, DR="CC0000", RR="FFE0E0", W="FFFFFF";
   let body = "";
 
   if (companyName) {
@@ -2393,10 +2453,9 @@ function buildDocxXml(sessions, docTitle, companyName, themeKey = "classic") {
     for (const sess of groups[gi]) {
       const net = netTotal(sess.rows);
       const unit = domUnit(sess);
-      const DT = detectTheme(sess.title);
-      const BD = DT.dark.replace("#","");
-      const BM = DT.mid.replace("#","");
-      const BL = DT.light.replace("#","");
+      const BD = exportPalette.darkRaw;
+      const BM = exportPalette.midRaw;
+      const BL = exportPalette.lightRaw;
 
       body += docxPara(docxRun(sess.title,{bold:true,color:BD,sz:24}),{spBefore:SP.titleBefore,spAfter:SP.titleAfter});
 
@@ -2409,13 +2468,15 @@ function buildDocxXml(sessions, docTitle, companyName, themeKey = "classic") {
 
       if (both) {
         groups.forEach((group, idx) => {
-          const groupColor = group.key === "sqft" ? DT.sqftDark.replace("#","") : group.key === "grove" ? "6d28d9" : DT.rnftDark.replace("#","");
-          body += docxPara(docxRun("▪ "+group.label,{bold:true,color:groupColor,sz:22}),{spBefore:SP.subBefore,spAfter:SP.subAfter});
-          body += buildTable(group.rows,group.unit,group.label+" Total",group.total,BD,groupColor,BL,BM,compact);
+          const tone = exportPalette[group.key] || exportPalette.sqft;
+          body += docxPara(docxRun("▪ "+group.label,{bold:true,color:tone.darkRaw,sz:22}),{spBefore:SP.subBefore,spAfter:SP.subAfter});
+          body += buildTable(group.rows,group.unit,group.label+" Total",group.total,tone.darkRaw,tone.darkRaw,BL,BM,compact);
           if (idx < groups.length - 1) body += docxPara(docxRun(""),{spAfter:SP.gapAfter});
         });
       } else {
-        body += buildTable(sess.rows, unit, "Net Total", net, BD, BD, BL, BM, compact);
+        const mainGroup = measureGroups(sess)[0];
+        const tone = exportPalette[mainGroup?.key] || exportPalette.sqft;
+        body += buildTable(sess.rows, unit, "Net Total", net, tone.darkRaw, tone.darkRaw, BL, BM, compact);
       }
       body += docxPara(docxRun(""),{spAfter:SP.trailAfter});
     }
@@ -2475,8 +2536,190 @@ const SETTINGS = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
   <w:defaultTabStop w:val="720"/>
 </w:settings>`;
 
-async function buildDocx(sessions, docTitle, companyName, logoUrl, customXml, themeKey = "classic") {
-  // Load JSZip from CDN (much more reliable in sandboxes than docx lib)
+const MEASUREFLOW_DOCX_PART = "customXml/measureflow-project.xml";
+const MEASUREFLOW_DOCX_MARKER = "MEASUREFLOW_PAYLOAD:";
+
+function utf8ToBase64(value) {
+  if (typeof TextEncoder !== "undefined") {
+    const bytes = new TextEncoder().encode(String(value || ""));
+    let binary = "";
+    bytes.forEach((byte) => {
+      binary += String.fromCharCode(byte);
+    });
+    return btoa(binary);
+  }
+  return btoa(unescape(encodeURIComponent(String(value || ""))));
+}
+
+function base64ToUtf8(value) {
+  if (typeof TextDecoder !== "undefined") {
+    const binary = atob(String(value || ""));
+    const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+    return new TextDecoder().decode(bytes);
+  }
+  return decodeURIComponent(escape(atob(String(value || ""))));
+}
+
+function encodeMeasureflowDocxPayload(data) {
+  return utf8ToBase64(JSON.stringify(data));
+}
+
+function decodeMeasureflowDocxPayload(payload) {
+  return JSON.parse(base64ToUtf8(payload));
+}
+
+function buildMeasureflowDocxPayloadXml(payload) {
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
+    `<measureflow-project><payload>${payload}</payload></measureflow-project>`;
+}
+
+function extractMeasureflowDocxPayloadXml(xml) {
+  const match = String(xml || "").match(/<payload>([A-Za-z0-9+/=]+)<\/payload>/);
+  return match ? match[1] : "";
+}
+
+function parseMeasureflowDocxLegacy(documentXml) {
+  const parser = new DOMParser();
+  const xmlDoc = parser.parseFromString(String(documentXml || ""), "application/xml");
+  const body = xmlDoc.getElementsByTagNameNS("*", "body")[0];
+  if (!body) {
+    throw new Error("This Word file does not contain a readable MeasureFlow document body.");
+  }
+
+  const textFromNode = (node) =>
+    Array.from(node.getElementsByTagNameNS("*", "t"))
+      .map((part) => part.textContent || "")
+      .join("")
+      .replace(/\s+/g, " ")
+      .trim();
+
+  const tableRows = (tbl) =>
+    Array.from(tbl.getElementsByTagNameNS("*", "tr")).map((tr) =>
+      Array.from(tr.getElementsByTagNameNS("*", "tc")).map((tc) => textFromNode(tc))
+    );
+
+  const parseDimParts = (dimText) =>
+    String(dimText || "")
+      .split(/\s+x\s+/i)
+      .map((part) => part.trim())
+      .filter(Boolean);
+
+  const typeFromUnit = (unitText) => {
+    const unit = String(unitText || "").toLowerCase();
+    if (unit.includes("gft")) return "grove";
+    if (unit.includes("rft")) return "rnft";
+    return "sqft";
+  };
+
+  const createImportedRow = (item, dimText, areaText, type) => {
+    const parts = parseDimParts(dimText);
+    const deduct = /^\(.*\)$/.test(String(areaText || "").trim());
+    let d1 = parts[0] || "";
+    let d2 = null;
+    let qty = 1;
+
+    if (type === "rnft" || type === "grove") {
+      qty = parseQty(parts[1] || 1);
+    } else {
+      d2 = parts[1] || "";
+      qty = parseQty(parts[2] || 1);
+    }
+
+    return {
+      id: uid(),
+      item: item || "",
+      d1,
+      d2: type === "sqft" ? (d2 || null) : null,
+      qty,
+      type,
+      deduct,
+      area: calcArea(d1, type === "sqft" ? d2 : null, qty, type),
+    };
+  };
+
+  const sessions = [];
+  let pendingTitle = "";
+  let titlePending = false;
+  let pendingGroupLabel = "";
+  let currentSession = null;
+
+  for (const child of Array.from(body.children)) {
+    const tag = child.localName;
+    if (tag === "p") {
+      const text = textFromNode(child);
+      if (!text || text.startsWith(MEASUREFLOW_DOCX_MARKER)) continue;
+      if (text.includes("Rows in brackets are deductions")) continue;
+      if (/^(Sqft|Rnft|Grove) Total:/i.test(text)) continue;
+      if (text.startsWith("▪")) {
+        pendingGroupLabel = text.replace(/^▪\s*/, "").trim();
+        continue;
+      }
+      pendingTitle = text;
+      titlePending = true;
+      continue;
+    }
+
+    if (tag !== "tbl") continue;
+    const rows = tableRows(child);
+    if (rows.length < 3) continue;
+
+    const header = rows[0] || [];
+    const totalRow = rows[rows.length - 1] || [];
+    const unitMatch = String(header[3] || "").match(/\(([^)]+)\)/);
+    const unitLabel = unitMatch ? unitMatch[1] : "";
+    const type = typeFromUnit(unitLabel);
+    const bodyRows = rows.slice(1, -1).filter((row) => row.length >= 4);
+    if (!bodyRows.length) continue;
+
+    if (!currentSession || titlePending) {
+      currentSession = {
+        id: uid(),
+        title: pendingTitle || "Imported Section",
+        rows: [],
+      };
+      sessions.push(currentSession);
+      titlePending = false;
+    }
+
+    if (pendingGroupLabel) {
+      if (type === "sqft") currentSession.sqftTitle = pendingGroupLabel;
+      if (type === "rnft") currentSession.rnftTitle = pendingGroupLabel;
+      if (type === "grove") currentSession.groveTitle = pendingGroupLabel;
+    } else {
+      const totalLabel = String(totalRow[1] || "").replace(/\s+Total$/i, "").trim();
+      if (totalLabel && !/^Net$/i.test(totalLabel)) {
+        if (type === "sqft") currentSession.sqftTitle = totalLabel;
+        if (type === "rnft") currentSession.rnftTitle = totalLabel;
+        if (type === "grove") currentSession.groveTitle = totalLabel;
+      }
+    }
+
+    currentSession.rows.push(
+      ...bodyRows.map((row) => createImportedRow(row[1], row[2], row[3], type))
+    );
+    pendingGroupLabel = "";
+  }
+
+  if (!sessions.length || !sessions.some((session) => session.rows.length > 0)) {
+    throw new Error("This Word file is missing the newer hidden payload and its table layout could not be recognized as a MeasureFlow measurement export.");
+  }
+
+  return {
+    docTitle: pendingTitle || "Imported MeasureFlow Project",
+    sessions: sessions.filter((session) => session.rows.length > 0),
+  };
+}
+
+function injectMeasureflowPayloadIntoDocxXml(xml, payload) {
+  if (!payload) return xml;
+  const hiddenPara = docxPara(
+    docxRun(`${MEASUREFLOW_DOCX_MARKER}${payload}`, { color: "FFFFFF", sz: 2, hidden: true }),
+    { spBefore: 0, spAfter: 0 }
+  );
+  return String(xml || "").replace("<w:sectPr>", `${hiddenPara}<w:sectPr>`);
+}
+
+async function ensureJsZipLoaded() {
   if (!window.JSZip) {
     await new Promise((res, rej) => {
       const urls = [
@@ -2495,14 +2738,60 @@ async function buildDocx(sessions, docTitle, companyName, logoUrl, customXml, th
       tryNext();
     });
   }
+}
+
+async function readProjectDataFromMeasureflowDocx(file) {
+  await ensureJsZipLoaded();
+  const zip = await window.JSZip.loadAsync(file);
+
+  let payload = "";
+  const customPayloadFile = zip.file(MEASUREFLOW_DOCX_PART);
+  if (customPayloadFile) {
+    payload = extractMeasureflowDocxPayloadXml(await customPayloadFile.async("string"));
+  }
+
+  if (!payload) {
+    const documentFile = zip.file("word/document.xml");
+    if (documentFile) {
+      const documentXml = await documentFile.async("string");
+      const markerIndex = documentXml.indexOf(MEASUREFLOW_DOCX_MARKER);
+      if (markerIndex >= 0) {
+        const remainder = documentXml.slice(markerIndex + MEASUREFLOW_DOCX_MARKER.length);
+        const markerMatch = remainder.match(/^([A-Za-z0-9+/=]+)/);
+        payload = markerMatch ? markerMatch[1] : "";
+      }
+      if (!payload) {
+        return parseMeasureflowDocxLegacy(documentXml);
+      }
+    }
+  }
+
+  if (!payload) {
+    throw new Error("This Word file was not exported by MeasureFlow, so it cannot be reopened as an editable project.");
+  }
+
+  return decodeMeasureflowDocxPayload(payload);
+}
+
+async function buildDocx(sessions, docTitle, companyName, logoUrl, customXml, themeKey = "classic", projectData = null) {
+  await ensureJsZipLoaded();
+
+  const projectPayload = projectData ? encodeMeasureflowDocxPayload(projectData) : "";
+  const documentXml = injectMeasureflowPayloadIntoDocxXml(
+    customXml || buildDocxXml(sessions, docTitle, companyName, themeKey),
+    projectPayload
+  );
 
   const zip = new window.JSZip();
   zip.file("[Content_Types].xml", CONTENT_TYPES);
   zip.file("_rels/.rels", RELS);
-  zip.file("word/document.xml", customXml || buildDocxXml(sessions, docTitle, companyName, themeKey));
+  zip.file("word/document.xml", documentXml);
   zip.file("word/_rels/document.xml.rels", DOC_RELS);
   zip.file("word/styles.xml", STYLES);
   zip.file("word/settings.xml", SETTINGS);
+  if (projectPayload) {
+    zip.file(MEASUREFLOW_DOCX_PART, buildMeasureflowDocxPayloadXml(projectPayload));
+  }
 
   return await zip.generateAsync({ type: "blob", mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" });
 }
@@ -3163,7 +3452,7 @@ table{width:100%;border-collapse:collapse;margin-top:0}
         )}
         {selKeys!==null && selKeys.length===0 && (
           <span style={{ color:"#ef4444", fontWeight:"bold", fontSize:11 }}>
-            ⚠ Nothing selected — downloads will be empty
+            �  Nothing selected — downloads will be empty
           </span>
         )}
       </div>
@@ -4366,12 +4655,12 @@ export default function App() {
   }
 
   const headerNavItems = [
-    { key: "measure", kind: "tab", label: t("ðŸ“ Measure", "ðŸ“ à¤®à¤¾à¤ª") },
-    { key: "bill", kind: "tab", label: t("ðŸ§¾ Bill", "ðŸ§¾ à¤¬à¤¿à¤²") },
-    { key: "rates", kind: "tab", label: t("ðŸ’° Rates", "ðŸ’° à¤°à¥‡à¤Ÿ") },
+    { key: "measure", kind: "tab", label: t("📐 Measure", "📐 � ¤®� ¤¾� ¤ª") },
+    { key: "bill", kind: "tab", label: t("🧾 Bill", "🧾 � ¤¬� ¤¿� ¤²") },
+    { key: "rates", kind: "tab", label: t("💰 Rates", "💰 � ¤°� ¥‡� ¤Ÿ") },
     { key: "/about", kind: "route", label: "About" },
     { key: "/contact", kind: "route", label: "Contact" },
-    ...(adminMode ? [{ key: "admin", kind: "tab", label: t("ðŸ›¡ Admin", "ðŸ›¡ à¤à¤¡à¤®à¤¿à¤¨") }] : []),
+    ...(adminMode ? [{ key: "admin", kind: "tab", label: t("🛡 Admin", "🛡 � ¤� ¤¡� ¤®� ¤¿� ¤¨") }] : []),
   ];
   const activeHeaderKey = isStaticPage ? pagePath : activeTab;
   const cleanHeaderNavItems = [
@@ -4698,6 +4987,25 @@ export default function App() {
     setSessions(prev => [...prev, { id: uid(), title: "New Section ("+(type === "rnft" ? "Rnft" : type === "grove" ? "Grove" : "Sqft")+")", sqftTitle: "Sqft", rnftTitle: "Rnft", rate: "", rows: [] }]);
   };
 
+  const mergeSections = (sourceId, direction) => {
+    setSessions(prev => {
+      const index = prev.findIndex(s => s.id === sourceId);
+      if (index < 0) return prev;
+      const targetIndex = direction === "up" ? index - 1 : index + 1;
+      if (targetIndex < 0 || targetIndex >= prev.length) return prev;
+      const source = prev[index];
+      const target = prev[targetIndex];
+      const mergedTarget = {
+        ...target,
+        rows: direction === "up"
+          ? [...target.rows, ...source.rows]
+          : [...source.rows, ...target.rows],
+      };
+      return prev.filter((_, i) => i !== index).map((session) => session.id === target.id ? mergedTarget : session);
+    });
+    flash(direction === "up" ? "Section merged into above section!" : "Section merged into below section!");
+  };
+
   // Logo
   function handleLogo(e) {
     const f = e.target.files[0];
@@ -4775,18 +5083,28 @@ export default function App() {
     flash("✅ Session saved as JSON!");
   }
 
-  function importJSON(e) {
+  async function importProjectFile(e) {
     const f = e.target.files[0];
     if (!f) return;
-    const reader = new FileReader();
-    reader.onload = ev => {
-      try {
-        const d = JSON.parse(ev.target.result);
-        applyProjectData(d, { historyRestore: true, resetHistory: true });
-        flash("✅ Session loaded!");
-      } catch (err) { setError("Invalid file: " + err.message); }
-    };
-    reader.readAsText(f);
+    const lowerName = String(f.name || "").toLowerCase();
+    setError("");
+
+    try {
+      let data;
+      if (lowerName.endsWith(".json")) {
+        data = JSON.parse(await f.text());
+      } else if (lowerName.endsWith(".docx")) {
+        data = await readProjectDataFromMeasureflowDocx(f);
+      } else {
+        throw new Error("Open Editable Project supports only MeasureFlow .json backups or MeasureFlow-exported .docx files.");
+      }
+
+      applyProjectData(data, { historyRestore: true, resetHistory: true });
+      flash(lowerName.endsWith(".docx") ? "✅ MeasureFlow Word file loaded!" : "✅ Session loaded!");
+    } catch (err) {
+      setError("Invalid file: " + err.message);
+    }
+
     e.target.value = "";
   }
 
@@ -4810,7 +5128,7 @@ export default function App() {
     setDocxBusy(true);
     flash("⏳ Building Word document…", true);
     try {
-      const blob = await buildDocx(sessions, docTitle, company, logoUrl, null, exportTheme);
+      const blob = await buildDocx(sessions, docTitle, company, logoUrl, null, exportTheme, buildProjectData());
       download(blob, docTitle.replace(/\s+/g, "_") + ".docx");
       flash("✅ Word (.docx) downloaded!");
     } catch (e) {
@@ -4822,10 +5140,11 @@ export default function App() {
 
   // ── Measurement PDF (print-to-PDF via new window) ─────────────────────────
   function handleMeasurePdf() {
-    const exportThemeConfig = getExportThemeConfig(exportTheme);
-    const pdfDark = exportThemeConfig.dark;
-    const pdfMid = exportThemeConfig.mid;
-    const pdfLight = exportThemeConfig.light;
+    const exportPalette = getMeasurementExportPalette(exportTheme);
+    const pdfDark = exportPalette.dark;
+    const pdfMid = exportPalette.mid;
+    const pdfLight = exportPalette.light;
+    const escHtml = (value) => String(value || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
     // Format dimension string exactly like target: "6'0\" x 27\" for rnft, "6'0\" x 2'3\" x 2\" for sqft
     function fmtDimPdf(dim1, dim2, qty, isRnft) {
       const q = qty || 1;
@@ -4840,56 +5159,64 @@ export default function App() {
     // Format area to 3 decimal places like target: 162.000
     function fmtA3(v) { return Number(v||0).toFixed(3); }
 
-    // Build one table-section HTML per session (or per sqft/rnft sub-section)
-    function buildSection(title, unitLabel, rows, totalVal) {
+    function buildTable(rows, unitLabel, totalLabel, totalVal, groupKey) {
       let srNo = 1;
       const isRnft = unitLabel.toLowerCase().includes("rn");
+      const tone = exportPalette[groupKey] || exportPalette.sqft;
       const trs = rows.map(r => {
         const dim = fmtDimPdf(r.d1, r.d2, r.qty, isRnft);
         const areaStr = r.deduct ? "("+fmtA3(r.area)+")" : fmtA3(r.area);
-        return `<tr>
+        const rowBg = r.deduct ? "#FFE0E0" : (srNo - 1) % 2 === 0 ? "#FFFFFF" : pdfLight;
+        const rowColor = r.deduct ? "#CC0000" : "#111111";
+        return `<tr style="background:${rowBg};color:${rowColor}">
           <td class="sr">${srNo++}.</td>
-          <td class="item">${r.deduct?"(-) ":""}${r.item||""}</td>
-          <td class="dim">${dim}</td>
+          <td class="item">${escHtml(r.item || "")}</td>
+          <td class="dim">${escHtml(dim)}</td>
           <td class="area">${areaStr}</td>
         </tr>`;
       }).join("");
 
-      const totalRow = `<tr class="total-row">
-        <td colspan="3" class="total-label">Total Area =</td>
-        <td class="area total-val">${fmtA3(totalVal)} ${unitLabel}</td>
+      const totalRow = `<tr class="total-row" style="background:${tone.dark};color:#fff">
+        <td class="sr"></td>
+        <td class="item total-label">${escHtml(totalLabel)}</td>
+        <td class="dim"></td>
+        <td class="area total-val">${fmtA3(totalVal)} ${escHtml(unitLabel)}</td>
       </tr>`;
 
-      return `
-      <div class="section">
-        <div class="section-title">${title}</div>
-        <table>
-          <thead><tr>
+      return `<table class="measure-table">
+          <thead><tr style="background:${tone.dark};color:#fff">
             <th class="sr">Sr. No</th>
             <th class="item">Items</th>
-            <th class="dim">Dimensions (ft-in)</th>
-            <th class="area">Area (${unitLabel})</th>
+            <th class="dim">Dimensions</th>
+            <th class="area">Area (${escHtml(unitLabel)})</th>
           </tr></thead>
           <tbody>${trs}${totalRow}</tbody>
-        </table>
-      </div>`;
+        </table>`;
     }
 
     let sections = "";
     for (const sess of sessions) {
+      const groups = measureGroups(sess);
+      const both = hasBoth(sess.rows);
+      sections += `<div class="section">`;
+      sections += `<div class="session-title">${escHtml(sess.title)}</div>`;
+      if (sess.rows.some(r => r.deduct)) {
+        sections += `<div class="deduct-note">★ Rows in brackets are deductions</div>`;
+      }
+
       if (hasBoth(sess.rows)) {
-        for (const group of measureGroups(sess)) {
-          const pageType = group.key === "sqft" ? "Sqft." : group.key === "grove" ? "Grove." : "Rnft.";
-          const title = `${group.label} ${pageType}  Page`;
-          sections += buildSection(title, group.key === "sqft" ? "Sq ft" : group.unit, group.rows, group.total);
+        for (const group of groups) {
+          const tone = exportPalette[group.key] || exportPalette.sqft;
+          sections += `<div class="group-title" style="color:${tone.dark}">▪ ${escHtml(group.label)}</div>`;
+          sections += buildTable(group.rows, group.key === "sqft" ? "Sq ft" : group.unit, `${group.label} Total`, group.total, group.key);
         }
       } else {
-        const group = measureGroups(sess)[0];
+        const group = groups[0];
         const unitLabel = group ? (group.key === "sqft" ? "Sq ft" : group.unit) : "Sq ft";
-        const pageType = group ? (group.key === "sqft" ? "Sqft." : group.key === "grove" ? "Grove." : "Rnft.") : "Sqft.";
-        const title = sess.title+" "+pageType+"  Page";
-        sections += buildSection(title, unitLabel, sess.rows, netTotal(sess.rows));
+        const totalLabel = group ? "Net Total" : "Net Total";
+        sections += buildTable(sess.rows, unitLabel, totalLabel, netTotal(sess.rows), group?.key || "sqft");
       }
+      sections += `</div>`;
     }
 
     const html = `<!DOCTYPE html><html><head><meta charset="utf-8"/>
@@ -4898,28 +5225,25 @@ export default function App() {
   * { box-sizing:border-box; margin:0; padding:0; }
   body { font-family:'Times New Roman', serif; font-size:13px; color:#111; background:#fff; }
   .page { padding:28px 36px; max-width:720px; margin:0 auto; }
-  .company { text-align:center; font-size:17px; font-weight:bold; letter-spacing:1px; margin-bottom:2px; }
-  .doc-title { text-align:center; font-size:13px; color:#555; margin-bottom:20px; }
+  .company { text-align:center; font-size:28px; font-weight:bold; color:${pdfDark}; letter-spacing:1px; margin-bottom:8px; }
+  .doc-title { text-align:center; font-size:18px; color:${pdfMid}; font-weight:bold; margin-bottom:24px; }
   .section { margin-bottom:32px; page-break-inside:avoid; }
-  .section-title {
-    font-size:13px; font-weight:bold; text-align:center;
-    border-top:2px solid ${pdfDark}; border-bottom:1px solid ${pdfMid};
-    padding:4px 0; margin-bottom:0; letter-spacing:.5px;
-  }
-  table { width:100%; border-collapse:collapse; font-size:12.5px; }
-  thead tr { border-bottom:1px solid ${pdfMid}; }
-  th { font-weight:bold; padding:5px 8px; text-align:left; font-size:12.5px; border-bottom:1px solid ${pdfMid}; color:${pdfDark}; }
-  td { padding:4px 8px; border-bottom:1px solid #ddd; vertical-align:top; }
+  .session-title { font-size:16px; font-weight:bold; color:${pdfDark}; margin:18px 0 10px; }
+  .group-title { font-size:15px; font-weight:bold; margin:10px 0 8px; }
+  .deduct-note { color:#CC0000; font-style:italic; font-size:12px; margin:0 0 10px; }
+  table.measure-table { width:100%; border-collapse:collapse; font-size:12.5px; margin-bottom:14px; }
+  th { font-weight:bold; padding:6px 8px; text-align:left; font-size:12.5px; border:1px solid ${pdfMid}; color:#fff; }
+  td { padding:5px 8px; border:1px solid ${pdfMid}; vertical-align:top; }
   th.sr, td.sr { width:42px; text-align:right; }
   th.dim, td.dim { width:160px; text-align:right; }
   th.area, td.area { width:110px; text-align:right; }
-  th.item, td.item { }
-  .total-row td { border-top:1.5px solid ${pdfMid}; border-bottom:2px solid ${pdfDark}; font-weight:bold; padding:5px 8px; }
+  .total-row td { font-weight:bold; padding:6px 8px; border-color:${pdfMid}; }
   .total-label { text-align:right; font-weight:bold; }
   .total-val { font-weight:bold; }
-  .grand-box { margin-top:16px; border-top:2px solid #111; padding-top:8px; font-weight:bold; font-size:13px; display:flex; justify-content:flex-end; gap:20px; flex-wrap:wrap; }
+  .grand-box { margin-top:18px; border-top:2px solid ${pdfDark}; padding-top:10px; font-weight:bold; font-size:15px; display:flex; justify-content:flex-end; gap:20px; flex-wrap:wrap; }
   .gt-item { color:${pdfDark}; }
-  .gt-item.grove { color:#7c3aed; }
+  .gt-item.rnft { color:${exportPalette.rnft.dark}; }
+  .gt-item.grove { color:${exportPalette.grove.dark}; }
   @media print {
     body { font-size:12px; }
     .page { padding:16px 20px; }
@@ -4929,12 +5253,12 @@ export default function App() {
 <script>window.onload = function(){ setTimeout(function(){ window.print(); }, 300); }</script>
 </head><body>
 <div class="page">
-  ${company ? '<div class="company">'+company+'</div>' : ''}
-  ${docTitle ? '<div class="doc-title">'+docTitle+'</div>' : ''}
+  ${company ? '<div class="company">'+escHtml(company)+'</div>' : ''}
+  ${docTitle ? '<div class="doc-title">'+escHtml(docTitle)+'</div>' : ''}
   ${sections}
   <div class="grand-box">
     ${grandSqft(sessions)>0 ? '<span class="gt-item">Sqft Total: '+fmtA3(grandSqft(sessions))+' Sq ft</span>' : ''}
-    ${grandRnft(sessions)>0 ? '<span class="gt-item">Rnft Total: '+fmtA3(grandRnft(sessions))+' Rn ft</span>' : ''}
+    ${grandRnft(sessions)>0 ? '<span class="gt-item rnft">Rnft Total: '+fmtA3(grandRnft(sessions))+' Rn ft</span>' : ''}
     ${grandGrove(sessions)>0 ? '<span class="gt-item grove">Grove Total: '+fmtA3(grandGrove(sessions))+' Gft</span>' : ''}
   </div>
 </div>
@@ -4959,7 +5283,7 @@ export default function App() {
         company, companySpec, companyAddr, companyMob, logoUrl,
         billClient, billSite, billDate, billSub, billAdvance, fixedItems, manualItems, billRates, rateCard, exportTheme
       });
-      const blob = await buildDocx(sessions, docTitle, company, logoUrl, xml, exportTheme);
+      const blob = await buildDocx(sessions, docTitle, company, logoUrl, xml, exportTheme, buildProjectData());
       const fname = (billClient || "Bill").replace(/\s+/g,"_") + "_" + billDate.replace(/\//g,"-") + ".docx";
       download(blob, fname);
       flash("✅ Bill downloaded!");
@@ -5133,7 +5457,7 @@ tr.foot-l td.foot-lbl,tr.foot-l td.foot-val{background:${billLight};color:${bill
   const launchMeasureDocx = () => queueDownloadWithAd("Measurement Word export", handleDocx);
   const launchMeasurePdf = () => queueDownloadWithAd("Measurement PDF export", handleMeasurePdf);
   const launchMeasureCsv = () => queueDownloadWithAd("Measurement CSV export", exportCSV);
-  const launchMeasureJson = () => queueDownloadWithAd("Measurement JSON backup", exportJSON);
+  const launchMeasureJson = () => queueDownloadWithAd("Editable project backup", exportJSON);
   const launchBillDocx = () => queueDownloadWithAd("Bill Word export", handleBill);
   const launchBillPdf = () => queueDownloadWithAd("Bill PDF export", handleBillPdf);
 
@@ -5376,9 +5700,12 @@ tr.foot-l td.foot-lbl,tr.foot-l td.foot-val{background:${billLight};color:${bill
               </div>
             </div>
             <div style={{ marginLeft:"auto", display:"flex", gap:8 }}>
-              <button style={btn("#7c3aed")} onClick={launchMeasureJson}>💾 Save Session</button>
-              <button style={btn("#0891b2")} onClick={() => importRef.current.click()}>📂 Load Session</button>
+              <button style={btn("#7c3aed")} onClick={launchMeasureJson}>💾 Save Editable Project</button>
+              <button style={btn("#0891b2")} onClick={() => importRef.current.click()}>📂 Open Editable Project (.json/.docx)</button>
             </div>
+          </div>
+          <div style={{ padding: "0 14px 14px", fontSize: 11, color: "#64748b" }}>
+            Open Editable Project supports MeasureFlow JSON backups and Word files exported by MeasureFlow itself.
           </div>
           {recentProjects.length > 0 && (
             <div style={{ padding: "0 14px 14px" }}>
@@ -5388,7 +5715,7 @@ tr.foot-l td.foot-lbl,tr.foot-l td.foot-val{background:${billLight};color:${bill
                   <div key={project.id} style={{ background: "#f8fafc", border: "1px solid #dbeafe", borderRadius: 10, padding: 12 }}>
                     <div style={{ fontWeight: "bold", color: C.dark, marginBottom: 4 }}>{project.title}</div>
                     <div style={{ fontSize: 11, color: "#64748b", marginBottom: 8 }}>
-                      {project.company || "No company"} � {project.sessionCount || 0} sections
+                      {project.company || "No company"} · {project.sessionCount || 0} sections
                     </div>
                     <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 10 }}>
                       {project.savedAt ? new Date(project.savedAt).toLocaleString("en-IN") : ""}
@@ -5409,8 +5736,8 @@ tr.foot-l td.foot-lbl,tr.foot-l td.foot-val{background:${billLight};color:${bill
           <div style={cardHead()}>
             <span>📤</span><span style={cardTitle}>{t("Upload Images","तस्वीरें अपलोड करें")}</span>
             <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
-              <button style={btn("#0891b2", true)} onClick={() => importRef.current.click()}>📂 Load Session</button>
-              <input ref={importRef} type="file" accept=".json" style={{ display: "none" }} onChange={importJSON} />
+              <button style={btn("#0891b2", true)} onClick={() => importRef.current.click()}>📂 Open Editable Project (.json/.docx)</button>
+              <input ref={importRef} type="file" accept=".json,.docx,application/json,application/vnd.openxmlformats-officedocument.wordprocessingml.document" style={{ display: "none" }} onChange={importProjectFile} />
             </div>
           </div>
           <div style={{ padding: 14 }}>
@@ -5453,7 +5780,7 @@ tr.foot-l td.foot-lbl,tr.foot-l td.foot-val{background:${billLight};color:${bill
             )}
             {error && (
               <div style={{ marginTop: 8, background: C.redBg, border: "1px solid "+C.red, borderRadius: 8, padding: "8px 12px", color: C.red, fontSize: 13 }}>
-                ⚠️ {error}
+                � ï¸ {error}
               </div>
             )}
           </div>
@@ -5473,7 +5800,7 @@ tr.foot-l td.foot-lbl,tr.foot-l td.foot-val{background:${billLight};color:${bill
               </div>
             </div>
 
-            {sessions.map(sess => (
+            {sessions.map((sess, index) => (
               <SessionPanel
                 key={sess.id}
                 sess={sess}
@@ -5487,6 +5814,8 @@ tr.foot-l td.foot-lbl,tr.foot-l td.foot-val{background:${billLight};color:${bill
                   }
                   return next;
                 })}
+                onMergeUp={index > 0 ? () => mergeSections(sess.id, "up") : null}
+                onMergeDown={index < sessions.length - 1 ? () => mergeSections(sess.id, "down") : null}
               />
             ))}
 
@@ -5533,7 +5862,7 @@ tr.foot-l td.foot-lbl,tr.foot-l td.foot-val{background:${billLight};color:${bill
                 { label:"Word", sub:".docx", icon:"📄", color:"#1F4E79", shadow:"rgba(31,78,121,.3)", action:launchMeasureDocx, disabled:docxBusy, loadingLabel:"Building…" },
                 { label:"PDF",  sub:"Print / Save", icon:"📕", color:"#dc2626", shadow:"rgba(220,38,38,.3)", action:launchMeasurePdf },
                 { label:"CSV",  sub:"Spreadsheet",  icon:"📊", color:"#16a34a", shadow:"rgba(22,163,74,.3)",  action:launchMeasureCsv },
-                { label:"JSON", sub:"Session backup",icon:"💾", color:"#7c3aed", shadow:"rgba(124,58,237,.3)",action:launchMeasureJson },
+                { label:"JSON", sub:"Editable backup",icon:"💾", color:"#7c3aed", shadow:"rgba(124,58,237,.3)",action:launchMeasureJson },
               ].map(({label,sub,icon,color,shadow,action,disabled,loadingLabel})=>(
                 <button key={label} disabled={!!disabled} onClick={action} style={{
                   display:"flex", alignItems:"center", gap:9,
@@ -5605,7 +5934,7 @@ tr.foot-l td.foot-lbl,tr.foot-l td.foot-val{background:${billLight};color:${bill
               <div style={{ fontSize: 17, fontWeight: "bold", color: C.dark, marginBottom: 5 }}>MeasureFlow v2.0</div>
               <div style={{ fontSize: 13, marginBottom: 20 }}>Upload images · AI detects Sqft &amp; Rnft · Edit · Export</div>
               <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
-                {["📷 Upload image", "🤖 AI detects Sqft/Rnft", "✏️ Edit inline", "📝 Word .docx", "📊 CSV", "🖨 Print/PDF", "💾 Save & Load"].map((s, i) => (
+                {["📷 Upload image", "🤖 AI detects Sqft/Rnft", "✏️ Edit inline", "📝 Word .docx", "📊 CSV", "🖨 Print/PDF", "💾 Editable Project"].map((s, i) => (
                   <div key={i} style={{ background: "#fff", borderRadius: 9, padding: "9px 13px", border: "1px solid #dbeafe", fontSize: 12, color: C.dark, fontWeight: "bold" }}>
                     {s}
                   </div>
@@ -5624,6 +5953,16 @@ tr.foot-l td.foot-lbl,tr.foot-l td.foot-val{background:${billLight};color:${bill
     </div>
   );
 }
+
+
+
+
+
+
+
+
+
+
 
 
 
